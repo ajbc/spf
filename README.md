@@ -1,4 +1,0 @@
-spf
-===
-
-Social Poisson Factorization
