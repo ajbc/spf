@@ -312,7 +312,7 @@ class parameters:
         if users_updated == False:
             users_updated = set(model.users.values())
             items_updated = set(model.items.values())
-        print "user_scale: ", user_scale
+        #print "user_scale: ", user_scale
 
         usrs = list(users_updated)
         if model.MF:

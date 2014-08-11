@@ -24,6 +24,7 @@ user_scale = 1
 def save_state(dire, iteration, model, params):
     # find old state file
     oldstate = ''
+    # TODO: make this work for local dump (i.e. dire == '') 
     for f in [ f for f in os.listdir(dire) if isfile(join(dire,f)) ]:
         if f.startswith('params-'):
             oldstate = f
@@ -60,7 +61,7 @@ def infer(model, priors, params, data, dire=''):
     global user_scale
     global user_sample_count #TODO rm this line
     user_scale = 1.0 * len(model.users) / user_sample_count
-    print user_scale
+    #print user_scale
 
     items_seen_counts = defaultdict(int)
     batch_size = min(100000, len(data.train_triplets)) #0.1M
@@ -68,7 +69,7 @@ def infer(model, priors, params, data, dire=''):
 
     count = 0
     while not converged:
-        print "iteration %d" % iteration
+        # print "iteration %d" % iteration
        
         #print "    doing an all-observed pass"
         #if iteration==0:
@@ -89,7 +90,7 @@ def infer(model, priors, params, data, dire=''):
         users_updated = set(random.sample(model.users.values(), user_sample_count))
         user_scale = len(model.users) / user_sample_count
 
-        print len(users_updated)
+        #print len(users_updated)
         training_batch = [datum for datum in data.train_triplets\
             if datum[0] in users_updated]
         random.shuffle(training_batch)
@@ -97,7 +98,7 @@ def infer(model, priors, params, data, dire=''):
         
         if len(training_batch) == 0:
             continue
-        print len(training_batch)
+        #print len(training_batch)
         start = clock()
 
         items_updated = set()
@@ -116,28 +117,28 @@ def infer(model, priors, params, data, dire=''):
                 items_seen_counts[user] += 1
             #print "sending user_scale", user_scale
             params.update_shape(user, item, rating, model, data, user_scale)
-        print "      total", clock() - start
+        #print "      total", clock() - start
         
-        print "    updating theta then beta"
+        #print "    updating theta then beta"
         start = clock()
         params.update_MF(model, data, user_scale, \
             users_updated, \
             items_updated, items_seen_counts, tau0, kappa)
-        print "      theta & beta update time", clock()-start
+        #print "      theta & beta update time", clock()-start
     
 
         # only need to update tau from default (sum of ratings)
         # when we have an interaction term
         start = clock()
-        print "    updating tau and eta"
+        #print "    updating tau and eta"
         params.update_TF(model, data, user_scale, \
             users_updated, iteration, tau0, kappa)
-        print "      tau and eta update time", clock()-start
+        #print "      tau and eta update time", clock()-start
 
 
 
         if model.intercept: 
-            print "    updating intercepts"
+            #print "    updating intercepts"
             start = clock()
             itms = list(items_updated)
             itms_L = np.array([items_seen_counts[itm] for itm in itms])
@@ -148,9 +149,9 @@ def infer(model, priors, params, data, dire=''):
             antes = params.inter[itms][0]
             params.inter[itms] = params.inter[itms] * (1-rho) + \
                 rho * (params.a_inter[itms] / params.b_inter[itms])
-            print antes, params.inter[itms][0], rho[0], params.a_inter[itms][0],params.b_inter[itms][0]
-            print "ave intercept: ", (sum(params.inter) / model.item_count)
-            print "      intercept update time", clock()-start
+            #print antes, params.inter[itms][0], rho[0], params.a_inter[itms][0],params.b_inter[itms][0]
+            #print "ave intercept: ", (sum(params.inter) / model.item_count)
+            #print "      intercept update time", clock()-start
 
         start = clock()
         if iteration % 100 == 0:
@@ -164,7 +165,7 @@ def infer(model, priors, params, data, dire=''):
         if iteration % 50 == 0: 
             #print ''
             if iteration != 0:
-                print "    saving state"
+                #print "    saving state"
                 save_state(dire, iteration, model, params)
             tau_ave = 0 if type(params.tau)==type(params.inter) else params.tau.get_ave()
             logf.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
@@ -175,16 +176,18 @@ def infer(model, priors, params, data, dire=''):
         #log_state(logf, iteration, params, elbo)
         
         # assess convergence 
-        if count != model.item_count:
+        if iteration % 100 == 0 and count != model.item_count:
             count = sum([1 if items_seen_counts[item] > 1 else 0 \
                 for item in items_seen_counts])
             if count < model.item_count:
+                print "iteration %d" % iteration
                 print "    %f%% of items seen" % (count * 100.0 / model.item_count)
+                print "\telbo", elbo
 
         if iteration == 10:
             print "    getting likelihood"
-        elif iteration > 50 and iteration % 10 == 0 and count == model.item_count:#== len(data.train_triplets)*2:
-            print "    assessing convergence"
+        elif iteration > 50 and iteration % 10 == 0:#== len(data.train_triplets)*2:
+            #print "    assessing convergence"
             #CT = 0.00001 #TODO: move threshold or rename or something
             CT = 1e-6 #TODO: move threshold or rename or something
             stop = False
@@ -207,7 +210,7 @@ def infer(model, priors, params, data, dire=''):
             old_elbo = elbo
 
         iteration += 1
-        print "  everything else (elbo, log, etc.)", clock()-start
+        #print "  everything else (elbo, log, etc.)", clock()-start
     
     logf.close()
     elbologf.close()
@@ -235,6 +238,12 @@ def load_model(fit_dir, iteration, model, priors, data):
 def init_params(args, model, priors, data, spread=0.1):
     params = parameters(model, readonly=False, priors=priors, data=data)
     params.set_to_priors(priors)
+
+    import random
+    random.seed(0)
+    print random.random()
+    np.random.seed(0)
+    print np.random.rand()
     
     # initialize
     params.theta = (np.ones((model.user_count, model.K)) * priors['a_theta'] + \
