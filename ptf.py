@@ -1,10 +1,10 @@
 # PTF inference
 import argparse
-import sys
 import scipy
 from scipy.misc import factorial
-from scipy.special import digamma, gamma, gammaln
+from scipy.special import digamma, gamma, gammaln, psi
 import numpy as np
+from numpy import log, exp
 import random #TODO: just use one source for random, not both np and this
 from collections import defaultdict
 import time
@@ -31,13 +31,13 @@ def get_predictions(model, params, data, test_set):
         preds = np.ones(len(test_set.users))*1e-10
 
 
-    if model.iat or model.MF:
+    if model.MF:
         M = (params.theta[test_set.users] * params.beta[test_set.items]).sum(axis=1)
     
     if model.MF:
         preds += M
     
-    if model.trust or model.iat:
+    if model.trust:
         T = np.zeros(len(test_set.users))
         for i in xrange(len(test_set.users)):
             user = test_set.users[i]
@@ -59,13 +59,62 @@ def get_predictions(model, params, data, test_set):
     if model.trust:
         preds += T
 
-    if model.iat:
-        if model.trust:
-            preds += params.eta * M * T
-        else:
-            preds += M * T
-    
     return preds
+
+def approx_log_likelihood(model, params, data, priors):
+    # mirroring prem's code...
+    sf = 0
+    for user, item, rating in data.train_triplets:
+        phi_M = params.theta[model.users[user]] * params.beta[model.items[item]]
+        phi = phi_M / sum(phi_M)
+        phi *= rating
+        
+        #s = sum(phi * (np.log(phi_M) - np.log(phi)))
+        s = np.log(sum(phi_M)) * rating
+        
+        #s -= np.log(factorial(rating))
+        
+        s -= sum(phi_M)
+        
+        #print user, item, s, sum(phi_M)
+        sf += s
+
+    '''# theta
+    elbo_theta = (priors['b_theta'] - params.b_theta) * np.array(params.theta)
+    elbo_theta += (- priors['a_theta'] + params.a_theta) * np.array(np.log(params.theta)) 
+    elbo_theta += - priors['a_theta']*np.log(priors['b_theta']) + \
+        params.a_theta * np.log(params.b_theta)
+    elbo_theta += - gammaln(params.a_theta) + gammaln(priors['a_theta']) 
+
+    # beta
+    elbo_beta = (priors['b_beta'] - params.b_beta) * np.array(params.beta)
+    elbo_beta += (- priors['a_beta'] + params.a_beta) * np.array(np.log(params.beta)) 
+    elbo_beta += - priors['a_beta']*np.log(priors['b_beta']) + \
+        params.a_beta * np.log(params.b_beta)
+    elbo_beta += - gammaln(params.a_beta) + gammaln(priors['a_beta']) '''
+    # theta
+    elbo_theta = - priors['b_theta'] * np.array(params.theta)
+    #print elbo_theta
+    elbo_theta += priors['a_theta']*np.log(priors['b_theta'])
+    #print elbo_theta
+    elbo_theta -= gammaln(priors['a_theta']) 
+    #print elbo_theta
+    elbo_theta += (priors['a_theta'] - 1) * np.array(np.log(params.theta)) 
+    #print elbo_theta
+    #print (priors['a_theta'] - 1)
+    #print params.theta[0,0]
+    #print np.log(params.theta)[0,0]
+    #print np.array(np.log(params.theta))[0,0]
+
+    # beta
+    elbo_beta = - priors['b_beta'] * np.array(params.beta)
+    elbo_beta += priors['a_beta'] * np.log(priors['b_beta'])
+    elbo_beta -= gammaln(priors['a_beta']) 
+    elbo_beta += (priors['a_beta'] - 1) * np.array(np.log(params.beta)) 
+
+    print sf + elbo_theta.sum() + elbo_beta.sum()
+        
+
 
 def get_log_likelihoods(model, params, data, test_set):
     predictions = get_predictions(model, params, data, test_set)
@@ -78,12 +127,12 @@ def get_log_likelihoods(model, params, data, test_set):
     return likelihoods
 
 
-def get_elbo(model, priors, params, data, logf):
+def get_elbo(model, priors, params, data):
     #print "getting log likelihoods for ratings"
     rating_likelihoods = get_log_likelihoods(model, params, data, data.validation)
     
-    elbo = rating_likelihoods.sum()
-
+    elbo = rating_likelihoods.sum() / len(rating_likelihoods)
+    return elbo
     # theta
     elbo_theta = (-1*priors['b_theta'] + params.b_theta) * np.array(params.theta)
     elbo_theta += (priors['a_theta'] - params.a_theta) * np.array(np.log(params.theta)) 
@@ -100,33 +149,22 @@ def get_elbo(model, priors, params, data, logf):
 
     # tau
     if model.trust:
-        print "elbo_tau progression..."
+        #print "elbo_tau progression..."
         elbo_tau = (params.tau.multiply((priors['b_tau'].const_multiply(-1) + params.b_tau))).sum()
-        print "   ",elbo_tau
+        #print "   ",elbo_tau
         elbo_tau += (((priors['a_tau'] - params.a_tau)).multiply(params.tau.log())).sum() 
-        print "   ",elbo_tau
+        #print "   ",elbo_tau
         elbo_tau += (priors['a_tau'].multiply(priors['b_tau'].log())).sum() 
-        print "   ",elbo_tau
+        #print "   ",elbo_tau
         elbo_tau -= (params.a_tau.multiply(params.b_tau.log())).sum()
-        print "   ",elbo_tau
+        #print "   ",elbo_tau
         elbo_tau += params.a_tau.log_gamma_sum()
-        print "   ",elbo_tau
+        #print "   ",elbo_tau
         elbo_tau -= priors['a_tau'].log_gamma_sum()
-        print "   ",elbo_tau
+        #print "   ",elbo_tau
     else:
         elbo_tau = 0
     
-    # eta
-    if model.iat:
-        print "**********"
-        print params.a_eta, params.b_eta, params.eta
-        elbo_eta = (-1*priors['b_eta'] + params.b_eta) * params.eta
-        elbo_eta += (priors['a_eta'] - params.a_eta) * np.log(params.eta)
-        elbo_eta += priors['a_eta']*np.log(priors['b_eta']) - params.a_eta * np.log(params.b_eta)
-        elbo_eta += gammaln(params.a_eta) - gammaln(priors['a_eta']) 
-    else:
-        elbo_eta = 0.0
-   
     # intercept; b never varies from prior
     if model.intercept:
         elbo_inter = (priors['a_inter'] - params.a_inter) * np.log(params.inter)
@@ -140,12 +178,9 @@ def get_elbo(model, priors, params, data, logf):
     elbo += elbo_theta.sum()
     elbo += elbo_beta.sum()
     elbo += elbo_tau
-    elbo += elbo_eta
     elbo += elbo_inter.sum()
     #print "ELBO: ratings: %f\ttheta: %f\tbeta: %f\ttau: %f\teta: %f\tinter: %f\t=> total: %f" % \
     #    (elbo_ratings, elbo_theta.sum(), elbo_beta.sum(), elbo_tau, elbo_eta, elbo_inter.sum(), elbo)
-    logf.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
-        (elbo_ratings, elbo_theta.sum(), elbo_beta.sum(), elbo_tau, elbo_eta, elbo_inter.sum(), elbo))
     return elbo
 
 
@@ -154,11 +189,10 @@ def get_ave_likelihood(model, params, data, test_set):
         / test_set.size
 
 class model_settings:
-    def __init__(self, K, MF, trust, iat, intercept, users, items, undirected, binary, sorec=False):
+    def __init__(self, K, MF, trust, intercept, users, items, undirected, binary, sorec=False):
         self.K = K
         self.MF = MF
         self.trust = trust
-        self.iat = iat
         self.intercept = intercept
         self.users = users # hashes for users and items
         self.items = items
@@ -177,12 +211,10 @@ class model_settings:
             else True
         trust = False if args.model == 'PF' or args.model == "IATonly" \
             or args.model == "IAT+MF" else True
-        iat = True if args.model == 'PTFv2' or args.model == "IATonly" \
-            or args.model == "IAT+MF" else False # interaction term
         #sorec = True if args.sorec else False
 
         return model_settings(args.K, MF, \
-            trust, iat, args.intercept, {}, {}, args.undirected, args.binary)
+            trust, args.intercept, {}, {}, args.undirected, args.binary)
 
 class parameters:
     def __init__(self, model, readonly, priors=False, data=False):
@@ -191,21 +223,25 @@ class parameters:
 
         print "   initializing model parameters"
         self.tau = dict_matrix(float, model.user_count, model.user_count)
+        self.logtau = dict_matrix(float, model.user_count, model.user_count)
         self.eta = 0
         self.inter = np.zeros(model.item_count)
         self.theta = np.zeros((model.user_count, model.K))
+        self.logtheta = np.zeros((model.user_count, model.K))
         self.beta = np.zeros((model.item_count, model.K))
+        self.logbeta = np.zeros((model.item_count, model.K))
         
         if not readonly:
             print "    initializing intermediate variables"
             self.a_theta = np.ones((model.user_count, model.K))
             self.a_beta = np.ones((model.item_count, model.K))
             self.tau = np.zeros(3) #TODO: fix; this is heer for the logfile
-            if model.trust or model.iat:
+            if model.trust:
                 self.b_theta = np.ones((model.user_count, model.K))
                 self.b_beta = np.ones((model.item_count, model.K))
                 #self.tau = data.friend_matrix.copy(mult=10.0)
                 self.tau = data.friend_matrix.copy()#mult=0.1)
+                self.logtau = data.friend_matrix.copy()#mult=0.1)
             else:
                 self.b_theta = np.ones((model.user_count, model.K)) #TODO: do this outside if
                 self.b_beta = np.ones((model.item_count, model.K))
@@ -214,6 +250,7 @@ class parameters:
             self.a_inter = np.ones(model.item_count)
             self.b_inter = np.ones(model.item_count)*model.user_count# * 1e-9
             print "model.user_count", model.user_count
+            print "model.item_count", model.item_count
             if model.intercept:
                 self.inter = np.ones(model.item_count) * 0.1
             else:
@@ -233,78 +270,48 @@ class parameters:
 
    
     def update_shape(self, user, item, rating, model, data, user_scale=1.0):
-        #print "      updating shape for user %d and item %d" % (user,item)
-        phi_M = self.theta[user] * self.beta[item]
+        log_phi_M = self.logtheta[user] + self.logbeta[item]
+        phi_M = exp(log_phi_M)
+        
         start = clock()
-        if model.trust or model.iat:
+        log_phi_T = dict_row(float, 0)
+        if model.trust:
             if not model.binary:
-                phi_T = self.tau.multiply_row(user, \
-                    data.sparse_ratings, item, \
-                    1.0 if model.nofdiv else max(1, data.friend_counts[user][item]))
+                for friend in self.logtau.rows[user]:
+                    log_phi_T.cols[friend] = self.logtau.rows[user][friend] + \
+                    data.log_sparse_ratings.rows[item][friend]
                     #NOFDIV
             else:
-                phi_T = self.tau.multiply_row_select(user, \
-                    data.user_data, item, \
-                    1 if model.nofdiv else max(1, data.friend_counts[user][item]))
-                    #NOFDIV
-        else:
-            phi_T = dict_row(float, 1)
+                log_phi_T = self.logtau.rows[user] + data.log_user_data[item]
+        div = 0 if model.nofdiv or data.friend_counts[user][item] == 0 else \
+            max(0, log(data.friend_counts[user][item]))
+        if div != 0:
+            log_phi_T.sub_const(div)
+        phi_T = exp(log_phi_T)
         
         # this section is the problematic one
+
         phi_sum = self.inter[item]
         if model.MF:
             phi_sum += phi_M.sum()
         if model.trust:
             phi_sum += phi_T.sum()
-        if model.iat:
-            #phi_MT_sum, phi_MT1, phi_MT0 = phi_T.get_sums(phi_M  * self.eta)
-
-            phi_MT = np.mat(phi_M  * self.eta).T * phi_T.densedense()
-            phi_sum += phi_MT.sum()
-            #phi_sum += phi_MT_sum
         mult = rating / phi_sum
+        logmult = log(mult)
+        log_user_scale = log(user_scale)
     
         if model.intercept:
             self.a_inter[item] += self.inter[item] * mult * user_scale # for binary data, this fixes intercept max at 1
         
-        #if abs(self.beta[0,0] - self.beta[1,0]) < 1e-4 and item == 3729:
-        #    print self.a_beta[item]
-        #    print self.a_beta[item+1]
-        #    print '--'
         if model.MF: 
-            #self.a_theta[user] += phi_M * mult * user_scale
-            self.a_theta[user] += phi_M * mult 
-            self.a_beta[item] += phi_M * mult * user_scale
-        #if abs(self.beta[0,0] - self.beta[1,0]) < 1e-4 and item == 3729:
-        #    print self.a_beta[item]
-        #    print self.a_beta[item+1]
-        #    print '--'
+            self.a_theta[user] += exp(log_phi_M + logmult)
+            self.a_beta[item] += exp(log_phi_M + logmult)#TODO for svi + log_user_scale)
+            #self.a_beta[item] += exp(log_phi_M + logmult + log_user_scale)
         if model.trust:
             if phi_T.sum() != 0:
-                self.a_tau.row_add(user, phi_T, mult=mult)
-                #if user == 0:# and item > 1780:
-                #    print item, phi_M.sum(), phi_T.sum(), self.inter[item], mult
+                log_phi_T.add_const(logmult)
+                self.a_tau.row_add(user, log_phi_T.exp())
         
-        #print user_scale, mult 
-
-        if model.iat:
-            M_update = phi_MT.sum(axis=1) * mult
-            T_update = phi_MT.sum(axis=0) * mult
-            #M_update = phi_MT1 * mult
-            #T_update = phi_MT0 * mult
-
-            #self.a_theta[user] += M_update.flat * user_scale
-            self.a_theta[user] += M_update.flat
-            #self.a_theta[user] += M_update
-            self.a_beta[item] += (M_update * user_scale).flat
-            #self.a_beta[item] += M_update * user_scale
-            if T_update.sum() != 0:
-                self.a_tau.row_add(user, T_update.flat, phi_T.cols.keys())
-                #self.a_tau.row_add(user, T_update, phi_T.cols.keys())
-            if model.trust:
-                self.a_eta += float(phi_MT.sum() * mult) * user_scale
-                #self.a_eta += phi_MT_sum * mult * user_scale
-  
 
     def update_MF(self, model, data, user_scale=1.0, \
                 users_updated=False, \
@@ -312,38 +319,15 @@ class parameters:
         if users_updated == False:
             users_updated = set(model.users.values())
             items_updated = set(model.items.values())
-        #print "user_scale: ", user_scale
 
         usrs = list(users_updated)
         if model.MF:
-            self.b_theta[usrs] += self.beta.sum(axis=0)
-            #self.b_theta[usrs] += self.beta[itms].sum(axis=0)
-        if model.iat:
-            for user in users_updated:
-                user_row = dict_row(float, model.item_count)
-                for vser in data.friends[user]:
-                    trust = self.tau.get(user, vser)
-                    if model.binary:
-                        for item in data.user_data[vser]:
-                            user_row.item_add(item, trust)
-                    else:
-                        for item, rating in data.user_data[vser]:
-                            user_row.item_add(item, trust * rating)
-                
-                for item in user_row.cols.keys():
-                    if data.friend_counts[user][item] == 0:
-                        continue
-                    user_row.cols[item] *= self.eta / \
-                        (1.0 if model.nofdiv else \
-                        data.friend_counts[user][item]) #NOFDIV
-                    self.b_theta[user] += user_row.cols[item] * self.beta[item]
-                
-                self.theta[user] = self.a_theta[user] / self.b_theta[user]
-                for item in user_row.cols.keys():
-                    self.b_beta[item] += user_row.cols[item] * self.theta[user] * user_scale
-        else:
-            for user in users_updated:
-                self.theta[user] = self.a_theta[user] / self.b_theta[user]
+            self.b_theta += self.beta.sum(axis=0)
+
+        for user in users_updated:
+            self.theta[user] = self.a_theta[user] / self.b_theta
+            self.logtheta[user] = psi(self.a_theta[user]) - \
+                log(self.b_theta)
 
         if model.MF:
             self.b_beta += self.theta.sum(axis=0)
@@ -352,75 +336,21 @@ class parameters:
         
         
         for item in items_updated:
-            #if item == 1:
-            #    print "pre-update beta: ", self.beta[item]
             if items_seen_counts:
                 rho = (items_seen_counts[item] + tau0) ** (-kappa)
             else:
                 rho = 1
-            self.beta[item] = \
-                self.beta[item] * (1 - rho) + \
-                (self.a_beta[item] / self.b_beta[item]) * rho
-            #if item == 1:
-            #    print "post-update beta: ", self.beta[item], " (rho: ", rho, " & new: ", (self.a_beta[item] / self.b_beta[item]), ")"
+            self.beta[item] = (self.a_beta[item] / self.b_beta)
+            self.logbeta[item] = psi(self.a_beta[item]) - log(self.b_beta)
 
     def update_TF(self, model, data, user_scale=1.0, \
                 users_updated=False, iteration=1, tau0=1, kappa=1):
-        if iteration == 1 or users_updated == False:
-            rho = 1
-        else:
-            rho = (iteration + tau0) ** (-kappa)
-        #rho = (iteration + tau0) ** (-kappa)
         if users_updated == False:
             users_updated = set(model.users.values())
-        #itms = list(items_updated)
-        #usrs = list(users_updated)
 
-        # these only need to be updated if there's an interation term "iat"
-        if not model.iat:
-            if model.trust:
-                self.tau = self.a_tau / self.b_tau
-
-                #user = 0
-                #vser = data.friends[user][0]
-                #print "***************"
-                #user = 30
-                #print "user 30 has %d friends" % len(data.friends[user])
-                #for vser in data.friends[user]:
-                #    print vser, self.a_tau.get(user,vser),  self.b_tau.get(user,vser), \
-                #        self.a_tau.get(user,vser) / self.b_tau.get(user,vser), self.tau.rows[user][vser]
-            return
-        
-        for user in users_updated:
-            MF = {}
-            for vser in data.friends[user]:
-                uv = 0
-                for dat in data.user_data[vser]:
-                    if model.binary:
-                        item = dat
-                    else:
-                        item, rating = dat
-                    if item not in MF:
-                        MF[item] = sum(self.theta[user] * self.beta[item])
-                    if model.binary:
-                        update = MF[item] \
-                            / (1 if model.nofdiv else data.friend_counts[user][item])
-                            #\ NOFDIV
-                    else:
-                        update = rating * MF[item] \
-                            / (1 if model.nofdiv else data.friend_counts[user][item])
-                            #/ data.friend_counts[user][item] NOFDIV
-                    self.b_tau.item_add(user, vser, \
-                        self.eta * update)
-                    uv += update
-                self.tau.set(user, vser, self.a_tau.get(user,vser) / \
-                    self.b_tau.get(user,vser))
-
-                if model.trust:
-                    self.b_eta += uv * self.tau.get(user,vser) * user_scale
-        
         if model.trust:
-            self.eta = (1-rho) * self.eta + rho * float(self.a_eta / self.b_eta)
+            self.tau = self.a_tau / self.b_tau
+            self.logtau = self.a_tau.psi() - log(self.b_tau)
         
 
 class triplets:
@@ -437,12 +367,35 @@ class dict_row():
         self.val_type = val_type
 
         self.cols = defaultdict(val_type)
-
+    
+    def __str__(self):
+        i = 0
+        rv = '['
+        for row in self.rows:
+            if i == 4:
+                rv += ' ...'
+                break
+            rv += ' ' + str(row) +':' + str(self.rows[row])
+            i += 1
+        return rv
+    
     def set(self, col, val):
         if val == 0 and col in self.cols:
             del self.cols[col]
         elif val != 0:
             self.cols[col] = val
+
+    def add_const(self, val):
+        for col in self.cols:
+            self.cols[col] += val
+
+    def sub_const(self, val):
+        for col in self.cols:
+            self.cols[col] -= val
+
+    def exp(self):
+        for col in self.cols:
+            self.cols[col] = exp(self.cols[col])
 
     def item_add(self, col, val):
         if val != 0: #not (type(val) == int or type(val) == float) or val != 0:
@@ -472,6 +425,12 @@ class dict_row():
         rv = dict_row(self.val_type, self.ncols)
         for col in self.cols:
             rv.set(col, self.cols[col] * const)
+        return rv
+    
+    def exp(self):
+        rv = dict_row(self.val_type, self.ncols)
+        for col in self.cols:
+            rv.set(col, exp(self.cols[col]))
         return rv
 
     def todense(self):
@@ -514,7 +473,26 @@ class dict_matrix():
             #self.cols = defaultdict(ddb)
         else:
             print "UHOH"
-
+    
+    def __str__(self):
+        i = 0
+        rv = ''
+        for row in self.rows:
+            if i > 9:
+                rv += '...'
+                break
+            rv += str(row) + ': ['
+            j = 0
+            for col in self.rows[row]:
+                if j > 3:
+                    rv += ' ...'
+                    break
+                rv += ' ' + str(col) +':' + str(self.rows[row][col])
+                j += 1
+            rv += ' ]\n'
+            i += 1
+        return rv
+        
     def set(self, row, col, val):
         if val == 0 and row in self.rows and col in self.rows[row]:
             del self.rows[row][col]
@@ -548,6 +526,15 @@ class dict_matrix():
             for col in self.rows[row]:
                 rv.set(row, col, self.rows[row][col] * mult)
         return rv
+    
+    def psi(self):
+        rv = dict_matrix(self.val_type)
+        for row in self.rows:
+            for col in self.rows[row]:
+                val = psi(self.rows[row][col])
+                rv.set(row, col, val)
+        return rv
+
 
     def __add__(self, other):#, val_type=self.val_type):
         #if self.nrows != other.nrows or self.ncols != other.ncols:
@@ -588,7 +575,12 @@ class dict_matrix():
                     self.item_add(row, col, other.rows[row][col])
         return self
 
-    def row_add(self, row_id, other, indexes=None, mult=1):
+    def row_add(self, row_id, other):
+        for col in self.rows[row_id]:
+            self.rows[row_id][col] += other.cols[col]
+            #self[row_id][col] += other[col] #TODO: do this form
+
+    '''def row_add(self, row_id, other, indexes=None, mult=1):
         #for col_id in other.rows[row_id]:
         #    self.item_add(row_id, col_id, other.rows[row_id][col_id])
         if indexes:
@@ -597,7 +589,8 @@ class dict_matrix():
         else:
             for col_id in other.cols:
                 self.item_add(row_id, col_id, other.cols[col_id] * mult)
-    
+    '''
+
     def multiply(self, other):
         rv = dict_matrix(self.val_type)#, self.nrows, self.ncols)
         for row in self.rows:
@@ -729,6 +722,7 @@ class dataset:
         self.item_counts = defaultdict(int)
         if not model.binary:
             self.sparse_ratings = dict_matrix(int)#, model.item_count, model.user_count)
+            self.log_sparse_ratings = dict_matrix(int)#, model.item_count, model.user_count)
             self.sparse_vratings = dict_matrix(int)#, model.item_count, model.user_count)
 
         self.friends = defaultdict(list)
@@ -791,6 +785,7 @@ class dataset:
             self.item_counts[item] += 1
             if not model.binary:
                 self.sparse_ratings.set(model.items[item], model.users[user], rating)
+                self.log_sparse_ratings.set(model.items[item], model.users[user], log(rating))
 
                 self.user_data[model.users[user]].append((model.items[item], rating))
                 self.item_data[model.items[item]].append((model.users[user], rating))

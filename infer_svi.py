@@ -1,4 +1,4 @@
-# PTF SVI
+# Varaiational Inference for Social Poisson Factorization
 import argparse
 import sys
 import scipy
@@ -11,7 +11,9 @@ import time
 from time import clock
 
 import os
-from os.path import isfile, join
+from os.path import isfile, join, exists
+
+import pygsl.sf
 
 import ptfstore
 from ptf import *
@@ -47,47 +49,26 @@ def log_state(f, iteration, params, likelihood):
 
 # infer latent variables
 def infer(model, priors, params, data, dire=''):
-    old_elbo = 0
-    elbo_counter = 0
+    old_C = 1.0
+    delta_C = 1e12
+    delta_C_thresh = 1e-10 #TODO: find good default value and make it a command arg
 
     logf = open(dire + 'log.tsv', 'w+')
-    logf.write("iteration\telbo\tave.theta\tave.beta\tave_tau\tave.eta\tave.intercept\n")
-    elbologf = open(dire + 'elbo.tsv', 'w+')
-    elbologf.write("iteration\tratings\ttheta\tbeta\ttaut\teta\tintercept\ttotal\n")
+    logf.write("iteration\tC\ttheta\tbeta\ttau\teta\tintercept\n") # ave values
     
-    converged = False
     iteration = 0
 
     global user_scale
-    global user_sample_count #TODO rm this line
-    user_scale = 1.0 * len(model.users) / user_sample_count
-    #print user_scale
 
     items_seen_counts = defaultdict(int)
     batch_size = min(100000, len(data.train_triplets)) #0.1M
    
-
-    count = 0
-    while not converged:
-        # print "iteration %d" % iteration
-       
-        #print "    doing an all-observed pass"
-        #if iteration==0:
-        #    users_updated = set(model.users.values())
-        #    training_batch = data.train_triplets
-        #    user_scale = 1.0
-        #else:
-        #    users_updated = set(random.sample(model.users.values(), user_sample_count))
-        #    user_scale = len(model.users) / user_sample_count * 1.0
-
-        #    print len(users_updated)
-        #    training_batch = [datum for datum in data.train_triplets\
-        #        if datum[0] in users_updated]
-        #    random.shuffle(training_batch)
-        
+    #while iteration < 110: #delta_C > delta_C_thresh: # not converged
+    while delta_C > delta_C_thresh: # not converged
+        #print iteration, params.tau
         
         #user_sample_count = len(model.users)
-        users_updated = set(random.sample(model.users.values(), user_sample_count))
+        users_updated = model.users.values()#set(random.sample(model.users.values(), user_sample_count))
         user_scale = len(model.users) / user_sample_count
 
         #print len(users_updated)
@@ -98,8 +79,6 @@ def infer(model, priors, params, data, dire=''):
         
         if len(training_batch) == 0:
             continue
-        #print len(training_batch)
-        start = clock()
 
         items_updated = set()
 
@@ -109,36 +88,30 @@ def infer(model, priors, params, data, dire=''):
                 rating = 1
             else:
                 user, item, rating = datum
+            u = user
+            i = item
             user = model.users[user]
             item = model.items[item]
+
+            #if user == 0 and item == 0:
+            #    print u, i, rating
 
             if item not in items_updated:
                 items_updated.add(item)
                 items_seen_counts[user] += 1
-            #print "sending user_scale", user_scale
             params.update_shape(user, item, rating, model, data, user_scale)
-        #print "      total", clock() - start
         
-        #print "    updating theta then beta"
         start = clock()
         params.update_MF(model, data, user_scale, \
             users_updated, \
             items_updated, items_seen_counts, tau0, kappa)
-        #print "      theta & beta update time", clock()-start
     
-
         # only need to update tau from default (sum of ratings)
         # when we have an interaction term
-        start = clock()
-        #print "    updating tau and eta"
         params.update_TF(model, data, user_scale, \
             users_updated, iteration, tau0, kappa)
-        #print "      tau and eta update time", clock()-start
-
-
 
         if model.intercept: 
-            #print "    updating intercepts"
             start = clock()
             itms = list(items_updated)
             itms_L = np.array([items_seen_counts[itm] for itm in itms])
@@ -147,73 +120,31 @@ def infer(model, priors, params, data, dire=''):
                 if items_seen_counts[itms[i]] == 1:
                     rho[i] = 1
             antes = params.inter[itms][0]
-            params.inter[itms] = params.inter[itms] * (1-rho) + \
-                rho * (params.a_inter[itms] / params.b_inter[itms])
-            #print antes, params.inter[itms][0], rho[0], params.a_inter[itms][0],params.b_inter[itms][0]
-            #print "ave intercept: ", (sum(params.inter) / model.item_count)
-            #print "      intercept update time", clock()-start
+            params.inter[itms] = params.a_inter[itms] / params.b_inter[itms]
+                #SVI
+                #params.inter[itms] * (1-rho) + \
+                #rho * (params.a_inter[itms] / params.b_inter[itms])
 
-        start = clock()
-        if iteration % 100 == 0:
-            elbologf.write("%d\t" % iteration)
-            elbo = get_elbo(model, priors, params, data, elbologf)
-            rating_likelihoods = get_log_likelihoods(model, params, data, data.validation)
-            #elbo = rating_likelihoods.sum() #not really the elbo, but okay...
-            #elbologf.write("%d\t%f\n" % (iteration,elbo))
-        params.set_to_priors(priors)
+        C = get_elbo(model, priors, params, data) #TODO: rename; it's not the elbo!
+        delta_C = abs((old_C - C) / old_C)
+        old_C = C
+
         # save state regularly
-        if iteration % 50 == 0: 
-            #print ''
+        if iteration % 10 == 0: # 50 == 0: 
             if iteration != 0:
-                #print "    saving state"
                 save_state(dire, iteration, model, params)
             tau_ave = 0 if type(params.tau)==type(params.inter) else params.tau.get_ave()
+            print iteration, C, delta_C
             logf.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
-                (iteration, elbo, params.theta.sum()/(model.K*model.user_count), params.beta.sum()/(model.K*model.item_count), \
+                (iteration, C, params.theta.sum()/(model.K*model.user_count), params.beta.sum()/(model.K*model.item_count), \
                 tau_ave, \
                 params.eta,params.inter.sum()/model.item_count))
         
-        #log_state(logf, iteration, params, elbo)
+        params.set_to_priors(priors)
         
-        # assess convergence 
-        if iteration % 100 == 0 and count != model.item_count:
-            count = sum([1 if items_seen_counts[item] > 1 else 0 \
-                for item in items_seen_counts])
-            if count < model.item_count:
-                print "iteration %d" % iteration
-                print "    %f%% of items seen" % (count * 100.0 / model.item_count)
-                print "\telbo", elbo
-
-        if iteration == 10:
-            print "    getting likelihood"
-        elif iteration > 50 and iteration % 10 == 0:#== len(data.train_triplets)*2:
-            #print "    assessing convergence"
-            #CT = 0.00001 #TODO: move threshold or rename or something
-            CT = 1e-6 #TODO: move threshold or rename or something
-            stop = False
-            if elbo >= old_elbo and old_elbo != 0 \
-                and abs((elbo - old_elbo) / old_elbo) < CT and count >= model.item_count:
-                stop = True
-            elif elbo < old_elbo:
-                elbo_counter += 1
-            elif elbo > old_elbo:
-                elbo_counter = 0
-
-            if stop:#elbo_counter > 3 or stop:
-                if elbo_counter > 3:
-                    print "stopping due to likelihood counter"
-                if stop:
-                    print "stopping due to STOP flag"
-                save_state(dire, iteration, model, params)
-                converged = True
-
-            old_elbo = elbo
-
         iteration += 1
-        #print "  everything else (elbo, log, etc.)", clock()-start
     
     logf.close()
-    elbologf.close()
 
 def load_data(args):
     model = model_settings.fromargs(args)
@@ -239,13 +170,77 @@ def init_params(args, model, priors, data, spread=0.1):
     params = parameters(model, readonly=False, priors=priors, data=data)
     params.set_to_priors(priors)
 
-    import random
+    '''import random
     random.seed(0)
     print random.random()
     np.random.seed(0)
-    print np.random.rand()
+    print np.random.rand()'''
+    print "pygsl numbers"
+    import pygsl.rng as rng
+    #rng.rng.set(11)
+    r = rng.rng()
+    r.set(11)
+    # mimic's prem's initialization
+    ad = np.ones((model.user_count, model.K)) * 0.3
+    for i in range(model.user_count):
+        for k in range(model.K):
+            a = 0.01 * r.uniform()
+            ad[i,k] += a
+    params.a_theta = ad
+    bd = np.ones(model.K) * 0.3
+    for k in range(model.K):
+        b = 0.1 * r.uniform()
+        bd[k] += b
+    params.b_theta = bd
+    cd = np.ones((model.item_count, model.K)) * 0.3
+    for i in range(model.item_count):
+        for k in range(model.K):
+            c = 0.01 * r.uniform()
+            cd[i,k] += c
+    params.a_beta = cd
+    dd = np.ones(model.K) * 0.3
+    for k in range(model.K):
+        d = 0.1 * r.uniform()
+        dd[k] += d
+    params.b_beta = dd
+    
+    b = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only 
+    d = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only 
+    #there to mathc prem's code for random number generations, but it isn't 
+    #actually used
+    
+    #set_gamma_exp_init(_acurr, _Etheta, _Elogtheta, _b); 
+    params.logtheta = np.zeros((model.user_count, model.K))
+    for i in range(model.user_count):
+        for j in range(model.K):
+            b[j] = 0.3 + 0.1 * r.uniform()
+            params.theta[i,j] = ad[i,j] / b[j]
+            #print params.logtheta[i,j]
+            #print pygsl.sf.psi(ad[i,j])
+            #print np.log(b[j])
+            params.logtheta[i,j] = pygsl.sf.psi(ad[i,j])[0] - np.log(b[j])
+            #if i == 0 and j < 3:
+            #    print "[%2d,%2d]  (%5f %5f)  %5f (lg)%5f" % (i, j, ad[i,j], b[j], \
+            #        params.theta[i,j], params.logtheta[i,j])
+
+    #set_gamma_exp_init(_ccurr, _Ebeta, _Elogbeta, _d); 
+    params.logbeta = np.zeros((model.item_count, model.K))
+    for i in range(model.item_count):
+        for j in range(model.K):
+            d[j] = 0.3 + 0.1 * r.uniform()
+            params.beta[i,j] = cd[i,j] / d[j]
+            params.logbeta[i,j] = pygsl.sf.psi(cd[i,j])[0] - np.log(d[j])
+            #if i ==0 and j < 3:
+            #    print "[%2d,%2d]  (%5f %5f)  %5f (lg)%5f" % (i, j, cd[i,j], d[j], \
+            #        params.beta[i,j], params.logbeta[i,j])
+    #set_etheta_sum();
+    #set_ebeta_sum();
+    #set_to_prior_users(_anext, _bnext);
+    #set_to_prior_movies(_cnext, _dnext);
+         
     
     # initialize
+    '''
     params.theta = (np.ones((model.user_count, model.K)) * priors['a_theta'] + \
         spread * np.random.rand(model.user_count, model.K)) / priors['b_theta']
     params.theta /= model.K #params.theta.sum(axis=1)[:, np.newaxis]
@@ -253,10 +248,13 @@ def init_params(args, model, priors, data, spread=0.1):
     params.beta = (np.ones((model.item_count, model.K)) * priors['a_beta'] + \
         spread * np.random.rand(model.item_count, model.K)) / priors['b_beta']
     params.beta /= model.K #params.beta.sum(axis=1)[:, np.newaxis]
-    
+    ''' 
     if model.trust:
         params.b_tau = priors['b_tau'].copy()
-        
+    #params.tau = params.a_tau / params.b_tau
+    #params.logtau = params.a_tau.psi() - log(params.b_tau)
+    #print '***', params.tau.rows[0][1]
+    params.set_to_priors(priors)
     return params
 
 def set_priors(args, model, data):
@@ -306,7 +304,7 @@ def parse_args():
     parser.add_argument('--out', dest='fit_dir', type=str, default='', \
         help='Model directory; all output goes here.')
     parser.add_argument('--model', dest='model', type=str, default='PTFv1', \
-        help='Model type; options: PF, PTF-only (trust), PTF-simple (PTFv1), PTF-interaction (PTFv2), IATonly, IAT+MF')
+        help='Model type; options: PF, PTF-only (trust), PTF-simple (PTFv1)')
     parser.add_argument('--K', dest='K', type=int, default=10, \
         help='Number of components for matrix factorization.')
     parser.add_argument('--load', dest='load', action='store_true', \
@@ -361,11 +359,15 @@ def main():
     # define the priors
     priors = set_priors(args, model, data)
     print "priors set"
+
+    # create the fit dir if it doesn't exist
     args.fit_dir = args.fit_dir + ('/' if args.fit_dir != '' else '')
+    if not exists(args.fit_dir):
+        os.mkdir(args.fit_dir)
 
     # run inference to find best parameters
-    params = load_model(args.fit_dir, args.iteration, model, priors, data) if args.load else \
-        init_params(args, model, priors, data)
+    params = load_model(args.fit_dir, args.iteration, model, priors, data) \
+        if args.load else init_params(args, model, priors, data)
     print 'all params initialized'
     ptfstore.dump_model(args.fit_dir + 'model_settings.dat', model)
     infer(model, priors, params, data, args.fit_dir)
@@ -377,8 +379,6 @@ if __name__ == '__main__':
     
     main()
 
-#sparse_ratings = lil_matrix((192789, 14468), dtype=np.float64) # 1M GR
-#sparse_ratings = lil_matrix((454303, 29697), dtype=np.float64) # 2M GR
 #TODO match pep8 style guide
 # read: http://www.python.org/dev/peps/pep-0008/
 # regularly chekc with pep8: "pep8 infer.py"
