@@ -342,10 +342,6 @@ def parse_args():
         default=0.3, help='Gamma shape prior for tau.')
     parser.add_argument('--b_tau', dest='b_tau', type=float,
         default=0.3, help='Gamma rate prior for tau.')
-    parser.add_argument('--a_eta', dest='a_eta', type=float,
-        default=1e-15, help='Gamma shape prior for eta.')
-    parser.add_argument('--b_eta', dest='b_eta', type=float,
-        default=0.3, help='Gamma rate prior for eta.')
     
     return parser.parse_args()
 
