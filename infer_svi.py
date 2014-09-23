@@ -63,20 +63,22 @@ def infer(model, priors, params, data, dire=''):
     items_seen_counts = defaultdict(int)
     batch_size = min(100000, len(data.train_triplets)) #0.1M
    
-    #while iteration < 110: #delta_C > delta_C_thresh: # not converged
+    MF_converged = False
     while delta_C > delta_C_thresh: # not converged
-        #print iteration, params.tau
+        if delta_C < 10**(log(delta_C_thresh)/log(10)/2) and not MF_converged:
+            MF_converged = True
+            print "MF converged"
         
         #user_sample_count = len(model.users)
-        users_updated = model.users.values()#set(random.sample(model.users.values(), user_sample_count))
+        users_updated_orig = set(model.users.keys())#set(random.sample(model.users.values(), user_sample_count))
+        users_updated = set([model.users[u] for u in users_updated_orig])
         user_scale = len(model.users) / user_sample_count
 
         #print len(users_updated)
         training_batch = [datum for datum in data.train_triplets\
-            if datum[0] in users_updated]
+            if datum[0] in users_updated_orig]
         random.shuffle(training_batch)
-        
-        
+
         if len(training_batch) == 0:
             continue
 
@@ -93,13 +95,11 @@ def infer(model, priors, params, data, dire=''):
             user = model.users[user]
             item = model.items[item]
 
-            #if user == 0 and item == 0:
-            #    print u, i, rating
-
             if item not in items_updated:
                 items_updated.add(item)
                 items_seen_counts[user] += 1
-            params.update_shape(user, item, rating, model, data, user_scale)
+            params.update_shape(user, item, rating, model, data, MF_converged, \
+                user_scale) # only update trust shapes after MF converged
         
         start = clock()
         params.update_MF(model, data, user_scale, \
@@ -108,8 +108,9 @@ def infer(model, priors, params, data, dire=''):
     
         # only need to update tau from default (sum of ratings)
         # when we have an interaction term
-        params.update_TF(model, data, user_scale, \
-            users_updated, iteration, tau0, kappa)
+        if MF_converged:
+            params.update_TF(model, data, user_scale, \
+                users_updated, iteration, tau0, kappa)
 
         if model.intercept: 
             start = clock()

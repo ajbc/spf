@@ -6,9 +6,9 @@ import numpy as np
 def dump_model(fname, model):
     f = open(fname, 'w+')
 
-    f.write("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n" % \
+    f.write("%d,%d,%d,%d,%d,%d,%d,%d,%d\n" % \
         (model.user_count, model.item_count, model.K, model.MF, model.trust, \
-        model.iat, model.intercept, model.undirected, model.binary, model.sorec))
+         model.intercept, model.undirected, model.binary, model.sorec))
 
     user_mapping = ''
     for user in model.users:
@@ -35,12 +35,9 @@ def dump(fname, model, params):
             intercepts += ' %.5e' % i
         f.write("%s\n" % intercepts.strip())
 
-    # eta
-    if model.trust and model.iat:
-        f.write("%.5e\n" % params.eta)
 
     # tau
-    if model.trust or model.iat:
+    if model.trust:
         tau = ''
         for row in params.tau.rows:
             for col in params.tau.rows[row]:
@@ -48,7 +45,7 @@ def dump(fname, model, params):
         f.write("%s\n" % tau.strip())
 
     # theta
-    if model.MF or model.iat:
+    if model.MF:
         row_id = 0
         for row in params.theta:
             r = 'U%d' % row_id
@@ -58,7 +55,7 @@ def dump(fname, model, params):
             row_id += 1
 
     # beta
-    if model.MF or model.iat:
+    if model.MF:
         row_id = 0
         for row in params.beta:
             r = 'I%d' % row_id
@@ -74,7 +71,7 @@ def dump(fname, model, params):
 def load_model(fname):
     f = open(fname, 'r')
 
-    user_count, item_count, K, MF, trust, iat, intercept, undirected, binary, sorec = \
+    user_count, item_count, K, MF, trust, intercept, undirected, binary, sorec = \
         [int(token) for token in f.readline().strip().split(',')]
 
     user_mapping = {}
@@ -90,7 +87,7 @@ def load_model(fname):
         else:
             item_mapping[int(a)] = int(b)
 
-    model = ptf.model_settings(K, MF, trust, iat, intercept, user_mapping, item_mapping, undirected, binary, sorec)
+    model = ptf.model_settings(K, MF, trust, intercept, user_mapping, item_mapping, undirected, binary, sorec)
     
     f.close()
     return model
@@ -111,13 +108,8 @@ def load(fname, model, readonly=True, priors=False, data=False):
             i += 1
         print "INTERCEPT (ave %f)" % (sum(params.inter) / len(params.inter))
 
-    # eta
-    if model.trust and model.iat:
-        params.eta = float(f.readline().strip())
-        print "ETA", params.eta
-
     # tau
-    if model.trust or model.iat:
+    if model.trust:
         count = 0.0
         val = 0.0
         for tau in f.readline().strip().split(' '):
@@ -131,7 +123,7 @@ def load(fname, model, readonly=True, priors=False, data=False):
         print "TAU (ave # %f, ave val %f)" % (count/model.user_count, val/count)#count / model.user_count, val / count)
 
     # theta
-    if model.MF or model.iat:
+    if model.MF:
         print "THETA"
         params.theta = np.zeros((model.user_count, model.K))
         params.beta = np.zeros((model.item_count, model.K))

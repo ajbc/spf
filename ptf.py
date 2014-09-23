@@ -269,13 +269,14 @@ class parameters:
         self.b_eta = priors['b_eta']
 
    
-    def update_shape(self, user, item, rating, model, data, user_scale=1.0):
+    def update_shape(self, user, item, rating, model, data, MF_converged=True, \
+        user_scale=1.0):
         log_phi_M = self.logtheta[user] + self.logbeta[item]
         phi_M = exp(log_phi_M)
         
         start = clock()
         log_phi_T = dict_row(float, 0)
-        if model.trust:
+        if model.trust and MF_converged:
             if not model.binary:
                 for friend in self.logtau.rows[user]:
                     log_phi_T.cols[friend] = self.logtau.rows[user][friend] + \
@@ -294,7 +295,7 @@ class parameters:
         phi_sum = self.inter[item]
         if model.MF:
             phi_sum += phi_M.sum()
-        if model.trust:
+        if model.trust and MF_converged:
             phi_sum += phi_T.sum()
         mult = rating / phi_sum
         logmult = log(mult)
@@ -307,7 +308,7 @@ class parameters:
             self.a_theta[user] += exp(log_phi_M + logmult)
             self.a_beta[item] += exp(log_phi_M + logmult)#TODO for svi + log_user_scale)
             #self.a_beta[item] += exp(log_phi_M + logmult + log_user_scale)
-        if model.trust:
+        if model.trust and MF_converged:
             if phi_T.sum() != 0:
                 log_phi_T.add_const(logmult)
                 self.a_tau.row_add(user, log_phi_T.exp())
@@ -770,9 +771,12 @@ class dataset:
             if rating == 0:# or counts[item] < 2:
                 continue
             if model.binary:
-                self.train_triplets.append((user, item))
+                #self.train_triplets.append((model.users[user], model.items[item]))
+                self.train_triplets.append((user,item))
             else:
                 self.train_triplets.append(triplet)
+                #self.train_triplets.append( \
+                #    (model.users[user], model.items[item], rating))
 
             if user not in model.users:
                 model.users[user] = user_count#len(model.users)
