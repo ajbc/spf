@@ -3,24 +3,24 @@ import numpy as np
 #from ptf import *
 #class ptfstore?
 
-def dump_model(fname, model):
+def dump_model(fname, data, model):
     f = open(fname, 'w+')
 
     f.write("%d,%d,%d,%d,%d,%d,%d,%d,%d\n" % \
-        (model.user_count, model.item_count, model.K, model.MF, model.trust, \
-         model.intercept, model.undirected, model.binary, model.sorec))
+        (data.user_count, data.item_count, model.K, model.MF, model.trust, \
+         model.intercept, data.directed, data.binary, model.sorec))
 
     user_mapping = ''
-    for user in model.users:
-        user_mapping += ' %d:%d' % (user, model.users[user])
+    for user in data.users:
+        user_mapping += ' %d:%d' % (user, data.users[user])
     f.write("%s\n" % user_mapping.strip())
     
     item_mapping = ''
-    for item in model.items:
+    for item in data.items:
         if not isinstance(item, basestring):
-            item_mapping += ' %d:%d' % (item, model.items[item])
+            item_mapping += ' %d:%d' % (item, data.items[item])
         else:
-            item_mapping += ' %s:%d' % (item, model.items[item])
+            item_mapping += ' %s:%d' % (item, data.items[item])
     f.write("%s\n" % item_mapping.strip())
 
     f.close()
@@ -71,7 +71,7 @@ def dump(fname, model, params):
 def load_model(fname):
     f = open(fname, 'r')
 
-    user_count, item_count, K, MF, trust, intercept, undirected, binary, sorec = \
+    user_count, item_count, K, MF, trust, intercept, directed, binary, sorec = \
         [int(token) for token in f.readline().strip().split(',')]
 
     user_mapping = {}
@@ -87,22 +87,22 @@ def load_model(fname):
         else:
             item_mapping[int(a)] = int(b)
 
-    model = ptf.model_settings(K, MF, trust, intercept, user_mapping, item_mapping, undirected, binary, sorec)
+    model = ptf.model_settings(K, MF, trust, intercept, sorec)
     
     f.close()
-    return model
+    return model, directed, binary, user_count, item_count, user_mapping, item_mapping
 
-def load(fname, model, readonly=True, priors=False, data=False):
+def load(fname, model, data, readonly=True, priors=False):
     f = open(fname, 'r')
 
     print "  in load"    
-    params = ptf.parameters(model, readonly, priors, data)
+    params = ptf.parameters(model, readonly, data, priors)
 
     # itercepts
     if model.intercept:
         i = 0
         for intercept in f.readline().strip().split(' '):
-            if i >= model.item_count:
+            if i >= data.item_count:
                 continue
             params.inter[i] = float(intercept)
             i += 1
@@ -120,15 +120,15 @@ def load(fname, model, readonly=True, priors=False, data=False):
             val += float(trust)
             #print user, friend, trust
             params.tau.rows[int(user)][int(friend)] = float(trust)
-        print "TAU (ave # %f, ave val %f)" % (count/model.user_count, val/count)#count / model.user_count, val / count)
+        print "TAU (ave # %f, ave val %f)" % (count/data.user_count, val/count)#count / model.user_count, val / count)
 
     # theta
     if model.MF:
         print "THETA"
-        params.theta = np.zeros((model.user_count, model.K))
-        params.beta = np.zeros((model.item_count, model.K))
+        params.theta = np.zeros((data.user_count, model.K))
+        params.beta = np.zeros((data.item_count, model.K))
         aves = np.zeros(model.K)
-        for user in xrange(model.user_count):
+        for user in xrange(data.user_count):
             i = 0
             L = f.readline()
             #for val in [float(v) for v in f.readline().strip().split(' ')]:
@@ -136,12 +136,12 @@ def load(fname, model, readonly=True, priors=False, data=False):
                 params.theta[user,i] = val
                 aves[i] += val
                 i += 1
-        print "aves: ", (aves / model.user_count)
+        print "aves: ", (aves / data.user_count)
         
         # beta
         print "BETA"
         aves = np.zeros(model.K)
-        for item in xrange(model.item_count):
+        for item in xrange(data.item_count):
             i = 0
             L = f.readline()
             #print L
@@ -150,7 +150,7 @@ def load(fname, model, readonly=True, priors=False, data=False):
                 params.beta[item,i] = val
                 aves[i] += val
                 i += 1
-        print "aves: ", (aves / model.user_count)
+        print "aves: ", (aves / data.user_count)
     
     f.close()
 

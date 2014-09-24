@@ -70,9 +70,9 @@ def infer(model, priors, params, data, dire=''):
             print "MF converged"
         
         #user_sample_count = len(model.users)
-        users_updated_orig = set(model.users.keys())#set(random.sample(model.users.values(), user_sample_count))
-        users_updated = set([model.users[u] for u in users_updated_orig])
-        user_scale = len(model.users) / user_sample_count
+        users_updated_orig = set(data.users.keys())#set(random.sample(model.users.values(), user_sample_count))
+        users_updated = set([data.users[u] for u in users_updated_orig])
+        user_scale = len(data.users) / user_sample_count
 
         #print len(users_updated)
         training_batch = [datum for datum in data.train_triplets\
@@ -85,15 +85,15 @@ def infer(model, priors, params, data, dire=''):
         items_updated = set()
 
         for datum in training_batch:
-            if model.binary:
+            if data.binary:
                 user, item = datum
                 rating = 1
             else:
                 user, item, rating = datum
             u = user
             i = item
-            user = model.users[user]
-            item = model.items[item]
+            user = data.users[user]
+            item = data.items[item]
 
             if item not in items_updated:
                 items_updated.add(item)
@@ -137,9 +137,9 @@ def infer(model, priors, params, data, dire=''):
             tau_ave = 0 if type(params.tau)==type(params.inter) else params.tau.get_ave()
             print iteration, C, delta_C
             logf.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
-                (iteration, C, params.theta.sum()/(model.K*model.user_count), params.beta.sum()/(model.K*model.item_count), \
+                (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
                 tau_ave, \
-                params.eta,params.inter.sum()/model.item_count))
+                params.eta,params.inter.sum()/data.item_count))
         
         params.set_to_priors(priors)
         
@@ -149,13 +149,13 @@ def infer(model, priors, params, data, dire=''):
 
 def load_data(args):
     model = model_settings.fromargs(args)
-    data = dataset(model)
+    data = dataset({}, {}, args.binary, args.directed)
     
-    data.read_ratings(model, args.data + "/train.tsv") 
+    data.read_ratings(args.data + "/train.tsv") 
     if model.trust: 
-        data.read_network(model, args.data + "/network.tsv")
+        data.read_network(args.data + "/network.tsv")
 
-    data.read_validation(model, args.data + "/validation.tsv")
+    data.read_validation(args.data + "/validation.tsv")
    
     print "data loaded"
     return model, data
@@ -168,7 +168,7 @@ def load_model(fit_dir, iteration, model, priors, data):
     return params
 
 def init_params(args, model, priors, data, spread=0.1):
-    params = parameters(model, readonly=False, priors=priors, data=data)
+    params = parameters(model, readonly=False, data=data, priors=priors)
     params.set_to_priors(priors)
 
     '''import random
@@ -182,8 +182,8 @@ def init_params(args, model, priors, data, spread=0.1):
     r = rng.rng()
     r.set(11)
     # mimic's prem's initialization
-    ad = np.ones((model.user_count, model.K)) * 0.3
-    for i in range(model.user_count):
+    ad = np.ones((data.user_count, model.K)) * 0.3
+    for i in range(data.user_count):
         for k in range(model.K):
             a = 0.01 * r.uniform()
             ad[i,k] += a
@@ -193,8 +193,8 @@ def init_params(args, model, priors, data, spread=0.1):
         b = 0.1 * r.uniform()
         bd[k] += b
     params.b_theta = bd
-    cd = np.ones((model.item_count, model.K)) * 0.3
-    for i in range(model.item_count):
+    cd = np.ones((data.item_count, model.K)) * 0.3
+    for i in range(data.item_count):
         for k in range(model.K):
             c = 0.01 * r.uniform()
             cd[i,k] += c
@@ -211,8 +211,8 @@ def init_params(args, model, priors, data, spread=0.1):
     #actually used
     
     #set_gamma_exp_init(_acurr, _Etheta, _Elogtheta, _b); 
-    params.logtheta = np.zeros((model.user_count, model.K))
-    for i in range(model.user_count):
+    params.logtheta = np.zeros((data.user_count, model.K))
+    for i in range(data.user_count):
         for j in range(model.K):
             b[j] = 0.3 + 0.1 * r.uniform()
             params.theta[i,j] = ad[i,j] / b[j]
@@ -225,8 +225,8 @@ def init_params(args, model, priors, data, spread=0.1):
             #        params.theta[i,j], params.logtheta[i,j])
 
     #set_gamma_exp_init(_ccurr, _Ebeta, _Elogbeta, _d); 
-    params.logbeta = np.zeros((model.item_count, model.K))
-    for i in range(model.item_count):
+    params.logbeta = np.zeros((data.item_count, model.K))
+    for i in range(data.item_count):
         for j in range(model.K):
             d[j] = 0.3 + 0.1 * r.uniform()
             params.beta[i,j] = cd[i,j] / d[j]
@@ -269,20 +269,17 @@ def set_priors(args, model, data):
     priors['a_tau'] = data.friend_matrix.const_multiply(args.a_tau * 1e-6)
     priors['b_tau'] = data.friend_matrix.const_multiply(args.b_tau * 1e-3)
     
-    priors['a_eta'] = args.a_eta
-    priors['b_eta'] = args.b_eta
-          
     #TODO: parse these from args?
     priors['a_inter'] = 1e-30
     priors['b_inter'] = 0.3
     
     if model.trust:
         print "updating b_tau"
-        user_weighted_ratings = dict_matrix(float, model.user_count, model.user_count)
+        user_weighted_ratings = dict_matrix(float, data.user_count, data.user_count)
 
-        for user in model.users.values():
+        for user in data.users.values():
             for vser in data.friends[user]:
-                if model.binary:
+                if data.binary:
                     for item in data.user_data[vser]:
                         user_weighted_ratings.item_add(user, vser, \
                             1.0 / data.friend_counts[user][item])
@@ -326,8 +323,8 @@ def parse_args():
     # TODO: implement SVI (look at old stuff?)
     parser.add_argument('--verbose', dest='verbose', action='store_true', 
         default=False, help='Give more output!')
-    parser.add_argument('--directed', dest='undirected', action='store_false', 
-        default=True, help='Network input is directed (default undirected)')
+    parser.add_argument('--directed', dest='directed', action='store_true', 
+        default=False, help='Network input is directed (default undirected)')
 
     # priors
     parser.add_argument('--a_theta', dest='a_theta', type=float,
@@ -366,7 +363,7 @@ def main():
     params = load_model(args.fit_dir, args.iteration, model, priors, data) \
         if args.load else init_params(args, model, priors, data)
     print 'all params initialized'
-    ptfstore.dump_model(args.fit_dir + 'model_settings.dat', model)
+    ptfstore.dump_model(args.fit_dir + 'model_settings.dat', data, model)
     infer(model, priors, params, data, args.fit_dir)
 
 

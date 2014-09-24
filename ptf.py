@@ -43,7 +43,7 @@ def get_predictions(model, params, data, test_set):
             user = test_set.users[i]
             item = test_set.items[i]
             for vser in data.friends[user]:
-                if model.binary:
+                if data.binary:
                     if item in data.user_data[vser]:
                         T[i] += params.tau.get(user, vser)
                 else:
@@ -65,7 +65,7 @@ def approx_log_likelihood(model, params, data, priors):
     # mirroring prem's code...
     sf = 0
     for user, item, rating in data.train_triplets:
-        phi_M = params.theta[model.users[user]] * params.beta[model.items[item]]
+        phi_M = params.theta[data.users[user]] * params.beta[data.items[item]]
         phi = phi_M / sum(phi_M)
         phi *= rating
         
@@ -189,15 +189,11 @@ def get_ave_likelihood(model, params, data, test_set):
         / test_set.size
 
 class model_settings:
-    def __init__(self, K, MF, trust, intercept, users, items, undirected, binary, sorec=False):
+    def __init__(self, K, MF, trust, intercept, sorec=False):
         self.K = K
         self.MF = MF
         self.trust = trust
         self.intercept = intercept
-        self.users = users # hashes for users and items
-        self.items = items
-        self.undirected = undirected
-        self.binary = binary
         self.sorec = sorec
 
     #@classmethod
@@ -213,48 +209,47 @@ class model_settings:
             or args.model == "IAT+MF" else True
         #sorec = True if args.sorec else False
 
-        return model_settings(args.K, MF, \
-            trust, args.intercept, {}, {}, args.undirected, args.binary)
+        return model_settings(args.K, MF, trust, args.intercept)
 
 class parameters:
-    def __init__(self, model, readonly, priors=False, data=False):
+    def __init__(self, model, readonly, data, priors):
         self.readonly = readonly
         print "  in parameters init (readonly=%s)" % str(readonly)    
 
         print "   initializing model parameters"
-        self.tau = dict_matrix(float, model.user_count, model.user_count)
-        self.logtau = dict_matrix(float, model.user_count, model.user_count)
+        print data
+        self.tau = dict_matrix(float, data.user_count, data.user_count)
+        self.logtau = dict_matrix(float, data.user_count, data.user_count)
         self.eta = 0
-        self.inter = np.zeros(model.item_count)
-        self.theta = np.zeros((model.user_count, model.K))
-        self.logtheta = np.zeros((model.user_count, model.K))
-        self.beta = np.zeros((model.item_count, model.K))
-        self.logbeta = np.zeros((model.item_count, model.K))
+        self.inter = np.zeros(data.item_count)
+        self.theta = np.zeros((data.user_count, model.K))
+        self.logtheta = np.zeros((data.user_count, model.K))
+        self.beta = np.zeros((data.item_count, model.K))
+        self.logbeta = np.zeros((data.item_count, model.K))
         
         if not readonly:
             print "    initializing intermediate variables"
-            self.a_theta = np.ones((model.user_count, model.K))
-            self.a_beta = np.ones((model.item_count, model.K))
+            self.a_theta = np.ones((data.user_count, model.K))
+            self.a_beta = np.ones((data.item_count, model.K))
             self.tau = np.zeros(3) #TODO: fix; this is heer for the logfile
             if model.trust:
-                self.b_theta = np.ones((model.user_count, model.K))
-                self.b_beta = np.ones((model.item_count, model.K))
+                self.b_theta = np.ones((data.user_count, model.K))
+                self.b_beta = np.ones((data.item_count, model.K))
                 #self.tau = data.friend_matrix.copy(mult=10.0)
                 self.tau = data.friend_matrix.copy()#mult=0.1)
                 self.logtau = data.friend_matrix.copy()#mult=0.1)
             else:
-                self.b_theta = np.ones((model.user_count, model.K)) #TODO: do this outside if
-                self.b_beta = np.ones((model.item_count, model.K))
+                self.b_theta = np.ones((data.user_count, model.K)) #TODO: do this outside if
+                self.b_beta = np.ones((data.item_count, model.K))
            
             # per item intercepts
-            self.a_inter = np.ones(model.item_count)
-            self.b_inter = np.ones(model.item_count)*model.user_count# * 1e-9
-            print "model.user_count", model.user_count
-            print "model.item_count", model.item_count
+            self.a_inter = np.ones(data.item_count)
+            self.b_inter = np.ones(data.item_count)*data.user_count# * 1e-9
+
             if model.intercept:
-                self.inter = np.ones(model.item_count) * 0.1
+                self.inter = np.ones(data.item_count) * 0.1
             else:
-                self.inter = np.zeros(model.item_count)
+                self.inter = np.zeros(data.item_count)
             self.eta = 0.1 #TODO: init from args
 
     def set_to_priors(self, priors):
@@ -265,8 +260,6 @@ class parameters:
         self.a_tau = priors['a_tau'].copy()
         self.b_tau = priors['b_tau'].copy()
         self.a_inter.fill(priors['a_inter']) 
-        self.a_eta = priors['a_eta']
-        self.b_eta = priors['b_eta']
 
    
     def update_shape(self, user, item, rating, model, data, MF_converged=True, \
@@ -277,7 +270,7 @@ class parameters:
         start = clock()
         log_phi_T = dict_row(float, 0)
         if model.trust and MF_converged:
-            if not model.binary:
+            if not data.binary:
                 for friend in self.logtau.rows[user]:
                     log_phi_T.cols[friend] = self.logtau.rows[user][friend] + \
                     data.log_sparse_ratings.rows[item][friend]
@@ -318,8 +311,8 @@ class parameters:
                 users_updated=False, \
                 items_updated=False, items_seen_counts=False, tau0=1, kappa=1):
         if users_updated == False:
-            users_updated = set(model.users.values())
-            items_updated = set(model.items.values())
+            users_updated = set(data.users.values())
+            items_updated = set(data.items.values())
 
         usrs = list(users_updated)
         if model.MF:
@@ -347,7 +340,7 @@ class parameters:
     def update_TF(self, model, data, user_scale=1.0, \
                 users_updated=False, iteration=1, tau0=1, kappa=1):
         if users_updated == False:
-            users_updated = set(model.users.values())
+            users_updated = set(data.users.values())
 
         if model.trust:
             self.tau = self.a_tau / self.b_tau
@@ -713,22 +706,30 @@ def ddf():
 def ddb():
     return defaultdict(bool)
 class dataset:
-    def __init__(self, model):
-        self.binary = model.binary
+    def __init__(self, users, items, binary, directed):
+        self.users = users # hashes for users and items
+        self.items = items
+
+        self.directed = directed
+        self.binary = binary
+
         self.train_triplets = []
 
         self.training = triplets()
         self.validation = triplets()
 
         self.item_counts = defaultdict(int)
-        if not model.binary:
-            self.sparse_ratings = dict_matrix(int)#, model.item_count, model.user_count)
-            self.log_sparse_ratings = dict_matrix(int)#, model.item_count, model.user_count)
-            self.sparse_vratings = dict_matrix(int)#, model.item_count, model.user_count)
+        self.item_count = 0
+        self.user_count = 0
+
+        if not binary:
+            self.sparse_ratings = dict_matrix(int)
+            self.log_sparse_ratings = dict_matrix(int)
+            self.sparse_vratings = dict_matrix(int)
 
         self.friends = defaultdict(list)
         self.friend_counts = defaultdict(ddi)
-        self.friend_matrix = dict_matrix(bool)#, model.user_count, model.user_count)
+        self.friend_matrix = dict_matrix(bool)
 
         self.user_data = defaultdict(list)
         self.item_data = defaultdict(list)
@@ -750,10 +751,10 @@ class dataset:
                     f.add(friend)
         return f
                 
-    def read_ratings(self, model, filename):
+    def read_ratings(self, filename):
         i = 0
-        user_count = len(model.users)
-        item_count = len(model.items)
+        user_count = len(self.users)
+        item_count = len(self.items)
         self.training.size = 0
         '''counts = defaultdict(int)
         for line in open(filename, 'r'):
@@ -770,41 +771,38 @@ class dataset:
 
             if rating == 0:# or counts[item] < 2:
                 continue
-            if model.binary:
-                #self.train_triplets.append((model.users[user], model.items[item]))
+            if self.binary:
+                #self.train_triplets.append((self.users[user], model.items[item]))
                 self.train_triplets.append((user,item))
             else:
                 self.train_triplets.append(triplet)
                 #self.train_triplets.append( \
-                #    (model.users[user], model.items[item], rating))
+                #    (self.users[user], model.items[item], rating))
 
-            if user not in model.users:
-                model.users[user] = user_count#len(model.users)
+            if user not in self.users:
+                self.users[user] = user_count#len(self.users)
                 user_count += 1
             
-            if item not in model.items:
-                model.items[item] = item_count#len(model.items)
+            if item not in self.items:
+                self.items[item] = item_count#len(self.items)
                 item_count += 1
 
             self.item_counts[item] += 1
-            if not model.binary:
-                self.sparse_ratings.set(model.items[item], model.users[user], rating)
-                self.log_sparse_ratings.set(model.items[item], model.users[user], log(rating))
+            if not self.binary:
+                self.sparse_ratings.set(self.items[item], self.users[user], rating)
+                self.log_sparse_ratings.set(self.items[item], self.users[user], log(rating))
 
-                self.user_data[model.users[user]].append((model.items[item], rating))
-                self.item_data[model.items[item]].append((model.users[user], rating))
+                self.user_data[self.users[user]].append((self.items[item], rating))
+                self.item_data[self.items[item]].append((self.users[user], rating))
             else:
-                self.user_data[model.users[user]].append(model.items[item])
-                #self.item_data[model.items[item]].append(model.users[user])
+                self.user_data[self.users[user]].append(self.items[item])
+                #self.item_data[self.items[item]].append(self.users[user])
 
-        #model.user_count = len(model.users)
-        model.user_count = user_count
-        model.item_count = item_count
-        #model.item_count = len(model.items)
-        #print model.items[890]
+        self.user_count = user_count
+        self.item_count = item_count
 
 
-    def read_validation(self, model, filename, user_set=False, item_set=False):
+    def read_validation(self, filename, user_set=False, item_set=False):
         users = []
         items = []
         ratings = []
@@ -813,20 +811,20 @@ class dataset:
         for line in open(filename, 'r'):
             user, item, rating = \
                 tuple([int(x.strip()) for x in line.split('\t')])
-            if user not in model.users or item not in model.items:
+            if user not in self.users or item not in self.items:
                 continue
             if (user_set and user not in user_set) or (item_set and item not in item_set):
                 continue
-            users.append(model.users[user])
-            items.append(model.items[item])
+            users.append(self.users[user])
+            items.append(self.items[item])
             ratings.append(rating)
-            friends.append(self.friend_counts[model.users[user]][model.items[item]])
+            friends.append(self.friend_counts[self.users[user]][self.items[item]])
             
-            if not model.binary:
-                self.user_datav[model.users[user]].append((model.items[item], rating))
-                self.sparse_vratings.set(model.items[item], model.users[user], rating)
+            if not self.binary:
+                self.user_datav[self.users[user]].append((self.items[item], rating))
+                self.sparse_vratings.set(self.items[item], self.users[user], rating)
             else:
-                self.user_datav[model.users[user]].append(model.items[item])
+                self.user_datav[self.users[user]].append(self.items[item])
 
         self.validation.users = users
         self.validation.items = items
@@ -835,7 +833,7 @@ class dataset:
         self.validation.size = len(users)
 
 
-    def read_network(self, model, filename):
+    def read_network(self, filename):
         print "reading network...."
         
         for line in open(filename, 'r'):
@@ -843,7 +841,7 @@ class dataset:
                 user, friend = tuple([int(x.strip()) for x in line.split(',')])
             else:
                 user, friend = tuple([int(x.strip()) for x in line.split('\t')])
-            if user not in model.users or friend not in model.users:
+            if user not in self.users or friend not in self.users:
                 continue
             f = "f"+str(friend)
             u = "f"+str(friend)
@@ -851,68 +849,68 @@ class dataset:
             duple2 = (friend, u)
             triplet = (user, f, 1)
             triplet2 = (friend, u, 1)
-            user = model.users[user]
-            friend = model.users[friend]
+            user = self.users[user]
+            friend = self.users[friend]
 
+            '''
             if model.sorec:
-                if f not in model.items:
-                    model.items[f] = model.item_count
-                    model.item_count += 1
-                item = model.items[f]
-                if not model.directed:
-                    if u not in model.items:
-                        model.items[u] = model.item_count
-                        model.item_count += 1
-                    item2 = model.items[u]
+                if f not in self.items:
+                    self.items[f] = self.item_count
+                    self.item_count += 1
+                item = self.items[f]
+                if not self.directed:
+                    if u not in self.items:
+                        self.items[u] = self.item_count
+                        self.item_count += 1
+                    item2 = self.items[u]
 
-                if model.binary:
+                if self.binary:
                     self.train_triplets.append(duple)
-                    if not model.directed:
+                    if not self.directed:
                         self.train_triplets.append(duple2)
                 else:
                     self.train_triplets.append(triplet)
-                    if not model.directed:
+                    if not self.directed:
                         self.train_triplets.append(triplet2)
 
                 self.item_counts[item] += 1
-                if not model.directed:
+                if not self.directed:
                     self.item_counts[item2] += 1
-                if not model.binary:
+                if not self.binary:
                     self.sparse_ratings.set(item, user, 1)
 
                     self.user_data[user].append((item, 1))
                     self.item_data[item].append((user, 1))
-                    if not model.directed:
+                    if not self.directed:
                         self.sparse_ratings.set(item2, friend, 1)
 
                         self.user_data[friend].append((item2, 1))
                         self.item_data[item2].append((friend, 1))
                 else:
                     self.user_data[user].append(item)
-                    if not model.directed:
+                    if not self.directed:
                         self.user_data[friend].append(item2)
-
-            if model.trust:
-                if friend not in self.friends[user] and user != friend:
-                    self.friends[user].append(friend)
-                    self.friend_matrix.set(user, friend, True)
-                    if model.undirected:
-                        self.friends[friend].append(user)
-                        self.friend_matrix.set(friend, user, True)
-                    
-                    if model.binary:
-                        for item in self.user_data[friend]:
-                            self.friend_counts[user][item] += 1
+            '''
+            if friend not in self.friends[user] and user != friend:
+                self.friends[user].append(friend)
+                self.friend_matrix.set(user, friend, True)
+                if not self.directed:
+                    self.friends[friend].append(user)
+                    self.friend_matrix.set(friend, user, True)
+                
+                if self.binary:
+                    for item in self.user_data[friend]:
+                        self.friend_counts[user][item] += 1
+                else:
+                    for item, rating in self.user_data[friend]:
+                        self.friend_counts[user][item] += 1
+                if not self.directed:
+                    if self.binary:
+                        for item in self.user_data[user]:
+                            self.friend_counts[friend][item] += 1
                     else:
-                        for item, rating in self.user_data[friend]:
-                            self.friend_counts[user][item] += 1
-                    if model.undirected:
-                        if model.binary:
-                            for item in self.user_data[user]:
-                                self.friend_counts[friend][item] += 1
-                        else:
-                            for item, rating in self.user_data[user]:
-                                self.friend_counts[friend][item] += 1
+                        for item, rating in self.user_data[user]:
+                            self.friend_counts[friend][item] += 1
 
         print "  network done"
 

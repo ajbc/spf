@@ -15,17 +15,17 @@ data_stem = sys.argv[1]
 fit_stem = sys.argv[2]
 
 # load model
-model = load_model(fit_stem+"/model_settings.dat")
+model, directed, binary, user_count, item_count, user_mapping, item_mapping = \
+    load_model(fit_stem+"/model_settings.dat")
 model.nofdiv=False
-model.binary=True
 
 # load data
-data = dataset(model)
+data = dataset(user_mapping, item_mapping, binary, directed)
 
-data.read_ratings(model, data_stem + "/train.tsv") 
+data.read_ratings(data_stem + "/train.tsv") 
 if model.trust: 
-    data.read_network(model, data_stem + "/network.tsv")
-print model.user_count, model.item_count
+    data.read_network(data_stem + "/network.tsv")
+print data.user_count, data.item_count
 
 # load parameters
 last_params = ''
@@ -34,14 +34,13 @@ for f in [ f for f in os.listdir(fit_stem) if isfile(join(fit_stem,f)) ]:
         last_params = join(fit_stem, f)
         break
 
-params = ptfstore.load(last_params, model)
+params = ptfstore.load(last_params, model, data)
 
 
 print "done reading in model"
 
 
 np.random.seed(42)
-print len(model.users)
 #print sorted(users, key=lambda x: users[x])[:10]
 #users_set = set(sorted(users, key=lambda x: np.random.rand())[:1000])
 #items_set = set(sorted(items, key=lambda x: -data.item_counts[model.items[x]])[:10000])
@@ -55,13 +54,13 @@ user_data = defaultdict(dict)
 for line in open(data_stem + "/test.tsv", 'r'):
     user, item, rating = \
         tuple([int(x.strip()) for x in line.split('\t')])
-    if user not in model.users or item not in model.items:
+    if user not in data.users or item not in data.items:
         continue
     #if (users_set and user not in users_set) or (items_set and item not in items_set):
     #    continue
     if rating != 0:
-        test_ratings.append((model.users[user], model.items[item], rating))
-        user_data[model.users[user]][model.items[item]] = rating
+        test_ratings.append((data.users[user], data.items[item], rating))
+        user_data[data.users[user]][data.items[item]] = rating
 
 userpreds_random = defaultdict(dict)
 userpreds_popularity = defaultdict(dict)
@@ -69,34 +68,34 @@ print "evaluating predictions for each user-item pair"
 
 print "creating rankings for each user..."
 f = open(fit_stem + "/rankings.out", 'w+')
-for user in model.users:
+for user in data.users:
     print user
     preds = {}
-    for item in model.items:
+    for item in data.items:
         pred = 0
 
         if model.intercept:
-            pred += params.inter[model.items[item]]
+            pred += params.inter[data.items[item]]
 
         if model.MF:
-            M = sum(params.theta[model.users[user]] * \
-                params.beta[model.items[item]])
+            M = sum(params.theta[data.users[user]] * \
+                params.beta[data.items[item]])
         
         if model.MF:
             pred += M
         
         if model.trust:
             T = 0
-            for vser in data.friends[model.users[user]]:
-                if model.binary:
+            for vser in data.friends[data.users[user]]:
+                if data.binary:
                     rating_v = 1 if item in data.user_data[vser] else 0
                 else:
-                    rating_v = data.sparse_ratings.get(model.items[item], vser) 
+                    rating_v = data.sparse_ratings.get(data.items[item], vser) 
                 if rating_v != 0:
-                    T += params.tau.get(model.users[user], vser) * rating_v
+                    T += params.tau.get(data.users[user], vser) * rating_v
         
-            if not model.nofdiv and data.friend_counts[model.users[user]][model.items[item]] != 0:
-                T /= data.friend_counts[model.users[user]][model.items[item]]
+            if not model.nofdiv and data.friend_counts[data.users[user]][data.items[item]] != 0:
+                T /= data.friend_counts[data.users[user]][data.items[item]]
 
         if model.trust:
             pred += T
@@ -105,18 +104,18 @@ for user in model.users:
 
     rank = 1
     exclude = set()
-    if model.binary:
-        exlude = set(data.user_data[model.users[user]])
+    if data.binary:
+        exlude = set(data.user_data[data.users[user]])
     else:
-        for item,rating in data.user_data[model.users[user]]:
+        for item,rating in data.user_data[data.users[user]]:
             exclude.add(item)
     for item in sorted(preds, key=lambda i:-preds[i]):
-        if model.items[item] in exclude:
+        if data.items[item] in exclude:
             continue
         pred = preds[item]
-        rating = user_data[model.users[user]][model.items[item]] if \
-            model.items[item] in user_data[model.users[user]] else 0
+        rating = user_data[data.users[user]][data.items[item]] if \
+            data.items[item] in user_data[data.users[user]] else 0
         f.write("%d, %d, %d, %f, %d, %d\n" % \
-            (user, item, rating, pred, rank, len(user_data[model.users[user]])))
+            (user, item, rating, pred, rank, len(user_data[data.users[user]])))
         rank += 1
 f.close()
