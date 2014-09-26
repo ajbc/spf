@@ -276,7 +276,9 @@ class parameters:
                     data.log_sparse_ratings.rows[item][friend]
                     #NOFDIV
             else:
-                log_phi_T = self.logtau.rows[user] + data.log_user_data[item]
+                for friend in self.logtau.rows[user]:
+                    if item in data.user_data[friend]:
+                        log_phi_T.cols[friend] = self.logtau.rows[user][friend]
         div = 0 if model.nofdiv or data.friend_counts[user][item] == 0 else \
             max(0, log(data.friend_counts[user][item]))
         if div != 0:
