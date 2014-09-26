@@ -22,8 +22,8 @@ model.nofdiv=False
 # load data
 data = dataset(user_mapping, item_mapping, binary, directed)
 
-data.read_ratings(data_stem + "/train.tsv") 
-if model.trust: 
+data.read_ratings(data_stem + "/train.tsv")
+if model.trust:
     data.read_network(data_stem + "/network.tsv")
 print data.user_count, data.item_count
 
@@ -80,20 +80,20 @@ for user in data.users:
         if model.MF:
             M = sum(params.theta[data.users[user]] * \
                 params.beta[data.items[item]])
-        
+
         if model.MF:
             pred += M
-        
+
         if model.trust:
             T = 0
             for vser in data.friends[data.users[user]]:
                 if data.binary:
                     rating_v = 1 if item in data.user_data[vser] else 0
                 else:
-                    rating_v = data.sparse_ratings.get(data.items[item], vser) 
+                    rating_v = data.sparse_ratings.get(data.items[item], vser)
                 if rating_v != 0:
                     T += params.tau.get(data.users[user], vser) * rating_v
-        
+
             if not model.nofdiv and data.friend_counts[data.users[user]][data.items[item]] != 0:
                 T /= data.friend_counts[data.users[user]][data.items[item]]
 
