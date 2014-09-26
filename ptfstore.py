@@ -14,7 +14,7 @@ def dump_model(fname, model):
     for user in model.users:
         user_mapping += ' %d:%d' % (user, model.users[user])
     f.write("%s\n" % user_mapping.strip())
-    
+
     item_mapping = ''
     for item in model.items:
         if not isinstance(item, basestring):
@@ -63,7 +63,7 @@ def dump(fname, model, params):
                 r += " %.5e" % val
             f.write("%s\n" % r.strip())
             row_id += 1
-    
+
     f.close()
 
 #print ptf.parameters
@@ -78,7 +78,7 @@ def load_model(fname):
     for token in f.readline().strip().split(' '):
         a,b = token.split(':')
         user_mapping[int(a)] = int(b)
-    
+
     item_mapping = {}
     for token in f.readline().strip().split(' '):
         a,b = token.split(':')
@@ -88,14 +88,14 @@ def load_model(fname):
             item_mapping[int(a)] = int(b)
 
     model = ptf.model_settings(K, MF, trust, intercept, user_mapping, item_mapping, undirected, binary, sorec)
-    
+
     f.close()
     return model
 
 def load(fname, model, readonly=True, priors=False, data=False):
     f = open(fname, 'r')
 
-    print "  in load"    
+    print "  in load"
     params = ptf.parameters(model, readonly, priors, data)
 
     # itercepts
@@ -137,7 +137,7 @@ def load(fname, model, readonly=True, priors=False, data=False):
                 aves[i] += val
                 i += 1
         print "aves: ", (aves / model.user_count)
-        
+
         # beta
         print "BETA"
         aves = np.zeros(model.K)
@@ -151,7 +151,7 @@ def load(fname, model, readonly=True, priors=False, data=False):
                 aves[i] += val
                 i += 1
         print "aves: ", (aves / model.user_count)
-    
+
     f.close()
 
     return params

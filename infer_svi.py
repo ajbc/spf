@@ -26,7 +26,7 @@ user_scale = 1
 def save_state(dire, iteration, model, params):
     # find old state file
     oldstate = ''
-    # TODO: make this work for local dump (i.e. dire == '') 
+    # TODO: make this work for local dump (i.e. dire == '')
     for f in [ f for f in os.listdir(dire) if isfile(join(dire,f)) ]:
         if f.startswith('params-'):
             oldstate = f
@@ -36,7 +36,7 @@ def save_state(dire, iteration, model, params):
     fname = "%s-iter%d.dat" % (dire + '/params', iteration)
     ptfstore.dump(fname, model, params)
 
-    # get rid of old state after 
+    # get rid of old state after
     if oldstate != '':
         os.remove(join(dire, oldstate))
 
@@ -55,20 +55,20 @@ def infer(model, priors, params, data, dire=''):
 
     logf = open(dire + 'log.tsv', 'w+')
     logf.write("iteration\tC\ttheta\tbeta\ttau\teta\tintercept\n") # ave values
-    
+
     iteration = 0
 
     global user_scale
 
     items_seen_counts = defaultdict(int)
     batch_size = min(100000, len(data.train_triplets)) #0.1M
-   
+
     MF_converged = False
     while delta_C > delta_C_thresh: # not converged
         if delta_C < 10**(log(delta_C_thresh)/log(10)/2) and not MF_converged:
             MF_converged = True
             print "MF converged"
-        
+
         #user_sample_count = len(model.users)
         users_updated_orig = set(model.users.keys())#set(random.sample(model.users.values(), user_sample_count))
         users_updated = set([model.users[u] for u in users_updated_orig])
@@ -100,19 +100,19 @@ def infer(model, priors, params, data, dire=''):
                 items_seen_counts[user] += 1
             params.update_shape(user, item, rating, model, data, MF_converged, \
                 user_scale) # only update trust shapes after MF converged
-        
+
         start = clock()
         params.update_MF(model, data, user_scale, \
             users_updated, \
             items_updated, items_seen_counts, tau0, kappa)
-    
+
         # only need to update tau from default (sum of ratings)
         # when we have an interaction term
         if MF_converged:
             params.update_TF(model, data, user_scale, \
                 users_updated, iteration, tau0, kappa)
 
-        if model.intercept: 
+        if model.intercept:
             start = clock()
             itms = list(items_updated)
             itms_L = np.array([items_seen_counts[itm] for itm in itms])
@@ -131,7 +131,7 @@ def infer(model, priors, params, data, dire=''):
         old_C = C
 
         # save state regularly
-        if iteration % 10 == 0: # 50 == 0: 
+        if iteration % 10 == 0: # 50 == 0:
             if iteration != 0:
                 save_state(dire, iteration, model, params)
             tau_ave = 0 if type(params.tau)==type(params.inter) else params.tau.get_ave()
@@ -140,23 +140,23 @@ def infer(model, priors, params, data, dire=''):
                 (iteration, C, params.theta.sum()/(model.K*model.user_count), params.beta.sum()/(model.K*model.item_count), \
                 tau_ave, \
                 params.eta,params.inter.sum()/model.item_count))
-        
+
         params.set_to_priors(priors)
-        
+
         iteration += 1
-    
+
     logf.close()
 
 def load_data(args):
     model = model_settings.fromargs(args)
     data = dataset(model)
-    
-    data.read_ratings(model, args.data + "/train.tsv") 
-    if model.trust: 
+
+    data.read_ratings(model, args.data + "/train.tsv")
+    if model.trust:
         data.read_network(model, args.data + "/network.tsv")
 
     data.read_validation(model, args.data + "/validation.tsv")
-   
+
     print "data loaded"
     return model, data
 
@@ -204,13 +204,13 @@ def init_params(args, model, priors, data, spread=0.1):
         d = 0.1 * r.uniform()
         dd[k] += d
     params.b_beta = dd
-    
-    b = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only 
-    d = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only 
-    #there to mathc prem's code for random number generations, but it isn't 
+
+    b = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only
+    d = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only
+    #there to mathc prem's code for random number generations, but it isn't
     #actually used
-    
-    #set_gamma_exp_init(_acurr, _Etheta, _Elogtheta, _b); 
+
+    #set_gamma_exp_init(_acurr, _Etheta, _Elogtheta, _b);
     params.logtheta = np.zeros((model.user_count, model.K))
     for i in range(model.user_count):
         for j in range(model.K):
@@ -224,7 +224,7 @@ def init_params(args, model, priors, data, spread=0.1):
             #    print "[%2d,%2d]  (%5f %5f)  %5f (lg)%5f" % (i, j, ad[i,j], b[j], \
             #        params.theta[i,j], params.logtheta[i,j])
 
-    #set_gamma_exp_init(_ccurr, _Ebeta, _Elogbeta, _d); 
+    #set_gamma_exp_init(_ccurr, _Ebeta, _Elogbeta, _d);
     params.logbeta = np.zeros((model.item_count, model.K))
     for i in range(model.item_count):
         for j in range(model.K):
@@ -238,8 +238,8 @@ def init_params(args, model, priors, data, spread=0.1):
     #set_ebeta_sum();
     #set_to_prior_users(_anext, _bnext);
     #set_to_prior_movies(_cnext, _dnext);
-         
-    
+
+
     # initialize
     '''
     params.theta = (np.ones((model.user_count, model.K)) * priors['a_theta'] + \
@@ -249,7 +249,7 @@ def init_params(args, model, priors, data, spread=0.1):
     params.beta = (np.ones((model.item_count, model.K)) * priors['a_beta'] + \
         spread * np.random.rand(model.item_count, model.K)) / priors['b_beta']
     params.beta /= model.K #params.beta.sum(axis=1)[:, np.newaxis]
-    ''' 
+    '''
     if model.trust:
         params.b_tau = priors['b_tau'].copy()
     #params.tau = params.a_tau / params.b_tau
@@ -268,14 +268,14 @@ def set_priors(args, model, data):
     # this keeps tau small by default
     priors['a_tau'] = data.friend_matrix.const_multiply(args.a_tau * 1e-6)
     priors['b_tau'] = data.friend_matrix.const_multiply(args.b_tau * 1e-3)
-    
+
     priors['a_eta'] = args.a_eta
     priors['b_eta'] = args.b_eta
-          
+
     #TODO: parse these from args?
     priors['a_inter'] = 1e-30
     priors['b_inter'] = 0.3
-    
+
     if model.trust:
         print "updating b_tau"
         user_weighted_ratings = dict_matrix(float, model.user_count, model.user_count)
@@ -299,7 +299,7 @@ def set_priors(args, model, data):
 def parse_args():
     #TODO: organize this a little better
     parser = argparse.ArgumentParser(description='Infer parameters for PTF.')
-    
+
     parser.add_argument('data', metavar='data', type=str, \
         help='Directory of data source.  See README for required format.')
     parser.add_argument('--out', dest='fit_dir', type=str, default='', \
@@ -312,21 +312,21 @@ def parse_args():
         default=False, help='Load most recent model from directory.')
     parser.add_argument('--iter', dest='iteration', type=int, \
         help='Iteration number to load.')
-    
+
     # flags to use an intercept or not
     parser.add_argument('--binary',dest='binary',action='store_true',default=False)
     parser.add_argument('--intercept',dest='intercept',action='store_true')
     parser.add_argument('--no-intercept',dest='intercept',action='store_false')
     parser.set_defaults(intercept=False)
-    
+
     parser.add_argument('--SVI', dest='svi', action='store_true', \
         default=False, help='Use stochatic VI instead of batch VI.')
-    
-    
+
+
     # TODO: implement SVI (look at old stuff?)
-    parser.add_argument('--verbose', dest='verbose', action='store_true', 
+    parser.add_argument('--verbose', dest='verbose', action='store_true',
         default=False, help='Give more output!')
-    parser.add_argument('--directed', dest='undirected', action='store_false', 
+    parser.add_argument('--directed', dest='undirected', action='store_false',
         default=True, help='Network input is directed (default undirected)')
 
     # priors
@@ -346,16 +346,16 @@ def parse_args():
         default=1e-15, help='Gamma shape prior for eta.')
     parser.add_argument('--b_eta', dest='b_eta', type=float,
         default=0.3, help='Gamma rate prior for eta.')
-    
+
     return parser.parse_args()
 
 def main():
     args = parse_args()
-   
-    # load training and validation data 
+
+    # load training and validation data
     # note: here, friends is a sparse matrix.....
     model, data = load_data(args)
-    model.nofdiv = False 
+    model.nofdiv = False
 
     # define the priors
     priors = set_priors(args, model, data)
@@ -377,7 +377,7 @@ def main():
 if __name__ == '__main__':
     np.random.seed(42)
     random.seed(43)
-    
+
     main()
 
 #TODO match pep8 style guide

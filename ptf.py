@@ -33,10 +33,10 @@ def get_predictions(model, params, data, test_set):
 
     if model.MF:
         M = (params.theta[test_set.users] * params.beta[test_set.items]).sum(axis=1)
-    
+
     if model.MF:
         preds += M
-    
+
     if model.trust:
         T = np.zeros(len(test_set.users))
         for i in xrange(len(test_set.users)):
@@ -47,10 +47,10 @@ def get_predictions(model, params, data, test_set):
                     if item in data.user_data[vser]:
                         T[i] += params.tau.get(user, vser)
                 else:
-                    rating_v = data.sparse_ratings.get(item, vser) 
+                    rating_v = data.sparse_ratings.get(item, vser)
                     if rating_v != 0:
                         T[i] += params.tau.get(user, vser) * rating_v
-            
+
             if data.friend_counts[user][item] != 0 and not model.nofdiv:
                 T[i] /= data.friend_counts[user][item] #NOFDIV
         #for i in range(10):
@@ -68,27 +68,27 @@ def approx_log_likelihood(model, params, data, priors):
         phi_M = params.theta[model.users[user]] * params.beta[model.items[item]]
         phi = phi_M / sum(phi_M)
         phi *= rating
-        
+
         #s = sum(phi * (np.log(phi_M) - np.log(phi)))
         s = np.log(sum(phi_M)) * rating
-        
+
         #s -= np.log(factorial(rating))
-        
+
         s -= sum(phi_M)
-        
+
         #print user, item, s, sum(phi_M)
         sf += s
 
     '''# theta
     elbo_theta = (priors['b_theta'] - params.b_theta) * np.array(params.theta)
-    elbo_theta += (- priors['a_theta'] + params.a_theta) * np.array(np.log(params.theta)) 
+    elbo_theta += (- priors['a_theta'] + params.a_theta) * np.array(np.log(params.theta))
     elbo_theta += - priors['a_theta']*np.log(priors['b_theta']) + \
         params.a_theta * np.log(params.b_theta)
-    elbo_theta += - gammaln(params.a_theta) + gammaln(priors['a_theta']) 
+    elbo_theta += - gammaln(params.a_theta) + gammaln(priors['a_theta'])
 
     # beta
     elbo_beta = (priors['b_beta'] - params.b_beta) * np.array(params.beta)
-    elbo_beta += (- priors['a_beta'] + params.a_beta) * np.array(np.log(params.beta)) 
+    elbo_beta += (- priors['a_beta'] + params.a_beta) * np.array(np.log(params.beta))
     elbo_beta += - priors['a_beta']*np.log(priors['b_beta']) + \
         params.a_beta * np.log(params.b_beta)
     elbo_beta += - gammaln(params.a_beta) + gammaln(priors['a_beta']) '''
@@ -97,9 +97,9 @@ def approx_log_likelihood(model, params, data, priors):
     #print elbo_theta
     elbo_theta += priors['a_theta']*np.log(priors['b_theta'])
     #print elbo_theta
-    elbo_theta -= gammaln(priors['a_theta']) 
+    elbo_theta -= gammaln(priors['a_theta'])
     #print elbo_theta
-    elbo_theta += (priors['a_theta'] - 1) * np.array(np.log(params.theta)) 
+    elbo_theta += (priors['a_theta'] - 1) * np.array(np.log(params.theta))
     #print elbo_theta
     #print (priors['a_theta'] - 1)
     #print params.theta[0,0]
@@ -109,11 +109,11 @@ def approx_log_likelihood(model, params, data, priors):
     # beta
     elbo_beta = - priors['b_beta'] * np.array(params.beta)
     elbo_beta += priors['a_beta'] * np.log(priors['b_beta'])
-    elbo_beta -= gammaln(priors['a_beta']) 
-    elbo_beta += (priors['a_beta'] - 1) * np.array(np.log(params.beta)) 
+    elbo_beta -= gammaln(priors['a_beta'])
+    elbo_beta += (priors['a_beta'] - 1) * np.array(np.log(params.beta))
 
     print sf + elbo_theta.sum() + elbo_beta.sum()
-        
+
 
 
 def get_log_likelihoods(model, params, data, test_set):
@@ -130,31 +130,31 @@ def get_log_likelihoods(model, params, data, test_set):
 def get_elbo(model, priors, params, data):
     #print "getting log likelihoods for ratings"
     rating_likelihoods = get_log_likelihoods(model, params, data, data.validation)
-    
+
     elbo = rating_likelihoods.sum() / len(rating_likelihoods)
     return elbo
     # theta
     elbo_theta = (-1*priors['b_theta'] + params.b_theta) * np.array(params.theta)
-    elbo_theta += (priors['a_theta'] - params.a_theta) * np.array(np.log(params.theta)) 
+    elbo_theta += (priors['a_theta'] - params.a_theta) * np.array(np.log(params.theta))
     elbo_theta += priors['a_theta']*np.log(priors['b_theta']) - \
         params.a_theta * np.log(params.b_theta)
-    elbo_theta += gammaln(params.a_theta) - gammaln(priors['a_theta']) 
+    elbo_theta += gammaln(params.a_theta) - gammaln(priors['a_theta'])
 
     # beta
     elbo_beta = (-1*priors['b_beta'] + params.b_beta) * np.array(params.beta)
-    elbo_beta += (priors['a_beta'] - params.a_beta) * np.array(np.log(params.beta)) 
+    elbo_beta += (priors['a_beta'] - params.a_beta) * np.array(np.log(params.beta))
     elbo_beta += priors['a_beta']*np.log(priors['b_beta']) - \
         params.a_beta * np.log(params.b_beta)
-    elbo_beta += gammaln(params.a_beta) - gammaln(priors['a_beta']) 
+    elbo_beta += gammaln(params.a_beta) - gammaln(priors['a_beta'])
 
     # tau
     if model.trust:
         #print "elbo_tau progression..."
         elbo_tau = (params.tau.multiply((priors['b_tau'].const_multiply(-1) + params.b_tau))).sum()
         #print "   ",elbo_tau
-        elbo_tau += (((priors['a_tau'] - params.a_tau)).multiply(params.tau.log())).sum() 
+        elbo_tau += (((priors['a_tau'] - params.a_tau)).multiply(params.tau.log())).sum()
         #print "   ",elbo_tau
-        elbo_tau += (priors['a_tau'].multiply(priors['b_tau'].log())).sum() 
+        elbo_tau += (priors['a_tau'].multiply(priors['b_tau'].log())).sum()
         #print "   ",elbo_tau
         elbo_tau -= (params.a_tau.multiply(params.b_tau.log())).sum()
         #print "   ",elbo_tau
@@ -164,16 +164,16 @@ def get_elbo(model, priors, params, data):
         #print "   ",elbo_tau
     else:
         elbo_tau = 0
-    
+
     # intercept; b never varies from prior
     if model.intercept:
         elbo_inter = (priors['a_inter'] - params.a_inter) * np.log(params.inter)
         elbo_inter += priors['a_inter']*np.log(params.b_inter) - params.a_inter * np.log(params.b_inter)
-        elbo_inter += gammaln(params.a_inter) - gammaln(priors['a_inter']) 
+        elbo_inter += gammaln(params.a_inter) - gammaln(priors['a_inter'])
     else:
         elbo_inter = np.zeros(3)
-    
-    
+
+
     elbo_ratings = elbo
     elbo += elbo_theta.sum()
     elbo += elbo_beta.sum()
@@ -204,7 +204,7 @@ class model_settings:
     #def new(self, user_count, item_count, K, MF, trust, iat, intercept, users, items, undirected):
     #    return model_settings(user_count, item_count, args.K, MF, \
     #        trust, iat, intercept, users, items, undirected)
-    
+
     @classmethod
     def fromargs(self, args):
         MF = False if args.model == "trust" or args.model == "IATonly" \
@@ -219,7 +219,7 @@ class model_settings:
 class parameters:
     def __init__(self, model, readonly, priors=False, data=False):
         self.readonly = readonly
-        print "  in parameters init (readonly=%s)" % str(readonly)    
+        print "  in parameters init (readonly=%s)" % str(readonly)
 
         print "   initializing model parameters"
         self.tau = dict_matrix(float, model.user_count, model.user_count)
@@ -230,7 +230,7 @@ class parameters:
         self.logtheta = np.zeros((model.user_count, model.K))
         self.beta = np.zeros((model.item_count, model.K))
         self.logbeta = np.zeros((model.item_count, model.K))
-        
+
         if not readonly:
             print "    initializing intermediate variables"
             self.a_theta = np.ones((model.user_count, model.K))
@@ -245,7 +245,7 @@ class parameters:
             else:
                 self.b_theta = np.ones((model.user_count, model.K)) #TODO: do this outside if
                 self.b_beta = np.ones((model.item_count, model.K))
-           
+
             # per item intercepts
             self.a_inter = np.ones(model.item_count)
             self.b_inter = np.ones(model.item_count)*model.user_count# * 1e-9
@@ -264,16 +264,16 @@ class parameters:
         self.b_beta.fill(priors['b_beta'])
         self.a_tau = priors['a_tau'].copy()
         self.b_tau = priors['b_tau'].copy()
-        self.a_inter.fill(priors['a_inter']) 
+        self.a_inter.fill(priors['a_inter'])
         self.a_eta = priors['a_eta']
         self.b_eta = priors['b_eta']
 
-   
+
     def update_shape(self, user, item, rating, model, data, MF_converged=True, \
         user_scale=1.0):
         log_phi_M = self.logtheta[user] + self.logbeta[item]
         phi_M = exp(log_phi_M)
-        
+
         start = clock()
         log_phi_T = dict_row(float, 0)
         if model.trust and MF_converged:
@@ -289,7 +289,7 @@ class parameters:
         if div != 0:
             log_phi_T.sub_const(div)
         phi_T = exp(log_phi_T)
-        
+
         # this section is the problematic one
 
         phi_sum = self.inter[item]
@@ -300,11 +300,11 @@ class parameters:
         mult = rating / phi_sum
         logmult = log(mult)
         log_user_scale = log(user_scale)
-    
+
         if model.intercept:
             self.a_inter[item] += self.inter[item] * mult * user_scale # for binary data, this fixes intercept max at 1
-        
-        if model.MF: 
+
+        if model.MF:
             self.a_theta[user] += exp(log_phi_M + logmult)
             self.a_beta[item] += exp(log_phi_M + logmult)#TODO for svi + log_user_scale)
             #self.a_beta[item] += exp(log_phi_M + logmult + log_user_scale)
@@ -312,7 +312,7 @@ class parameters:
             if phi_T.sum() != 0:
                 log_phi_T.add_const(logmult)
                 self.a_tau.row_add(user, log_phi_T.exp())
-        
+
 
     def update_MF(self, model, data, user_scale=1.0, \
                 users_updated=False, \
@@ -334,8 +334,8 @@ class parameters:
             self.b_beta += self.theta.sum(axis=0)
             #self.b_beta[list(items_updated)] += self.theta.sum(axis=0)
             #self.b_beta[itms] += user_scale * self.theta[usrs].sum(axis=0)
-        
-        
+
+
         for item in items_updated:
             if items_seen_counts:
                 rho = (items_seen_counts[item] + tau0) ** (-kappa)
@@ -352,7 +352,7 @@ class parameters:
         if model.trust:
             self.tau = self.a_tau / self.b_tau
             self.logtau = self.a_tau.psi() - log(self.b_tau)
-        
+
 
 class triplets:
     def __init__(self):
@@ -368,7 +368,7 @@ class dict_row():
         self.val_type = val_type
 
         self.cols = defaultdict(val_type)
-    
+
     def __str__(self):
         i = 0
         rv = '['
@@ -379,7 +379,7 @@ class dict_row():
             rv += ' ' + str(row) +':' + str(self.rows[row])
             i += 1
         return rv
-    
+
     def set(self, col, val):
         if val == 0 and col in self.cols:
             del self.cols[col]
@@ -401,12 +401,12 @@ class dict_row():
     def item_add(self, col, val):
         if val != 0: #not (type(val) == int or type(val) == float) or val != 0:
             self.cols[col] += val
-  
+
     def sum(self):
         rv = 0
         for col in self.cols:
             rv += self.cols[col]
-        return rv 
+        return rv
 
     def densedense(self):
         return self.cols.values()
@@ -427,7 +427,7 @@ class dict_row():
         for col in self.cols:
             rv.set(col, self.cols[col] * const)
         return rv
-    
+
     def exp(self):
         rv = dict_row(self.val_type, self.ncols)
         for col in self.cols:
@@ -439,7 +439,7 @@ class dict_row():
         for col in self.cols:
             rv[col] = self.cols[col]
         return rv
-    
+
     def get_sums(self, mult):
         phi_MT_sum = 0.0
         phi_MT1 = np.zeros(len(mult))
@@ -457,7 +457,7 @@ class dict_row():
         return phi_MT_sum, phi_MT1, phi_MT0
 
 
-    
+
 class dict_matrix():
     def __init__(self, val_type, nrows=False, ncols=False):
 
@@ -474,7 +474,7 @@ class dict_matrix():
             #self.cols = defaultdict(ddb)
         else:
             print "UHOH"
-    
+
     def __str__(self):
         i = 0
         rv = ''
@@ -493,7 +493,7 @@ class dict_matrix():
             rv += ' ]\n'
             i += 1
         return rv
-        
+
     def set(self, row, col, val):
         if val == 0 and row in self.rows and col in self.rows[row]:
             del self.rows[row][col]
@@ -501,7 +501,7 @@ class dict_matrix():
         elif val != 0:
             self.rows[row][col] = val
             #self.cols[col][row] = val
-    
+
     def get(self, row, col):
         return self.rows[row][col]
 
@@ -511,12 +511,12 @@ class dict_matrix():
             self.rows[row][col] += val
             #self.cols[col][row] += val
             #print "hi!", self.rows[row][col], val
-    
+
     def item_sub(self, row, col, val):
         if val != 0:
             self.rows[row][col] -= val
             #self.cols[col][row] -= val
-    
+
     def item_div(self, row, col, val):
         if val != 0:
             self.rows[row][col] /= val
@@ -527,7 +527,7 @@ class dict_matrix():
             for col in self.rows[row]:
                 rv.set(row, col, self.rows[row][col] * mult)
         return rv
-    
+
     def psi(self):
         rv = dict_matrix(self.val_type)
         for row in self.rows:
@@ -550,7 +550,7 @@ class dict_matrix():
             for col in other.rows[row]:
                 rv.item_add(row, col, other.rows[row][col])
         return rv
-    
+
     def __sub__(self, other):#, val_type=self.val_type):
         #if self.nrows != other.nrows or self.ncols != other.ncols:
         #    raise ValueError("Not the same shape! [self %dx%d; other %dx%d" % \
@@ -564,7 +564,7 @@ class dict_matrix():
             for col in other.rows[row]:
                 rv.item_sub(row, col, other.rows[row][col])
         return rv
-    
+
     def __iadd__(self, other):
         #if self.nrows != other.nrows or self.ncols != other.ncols:
         #    raise ValueError("Not the same shape! [self %dx%d; other %dx%d" % \
@@ -623,14 +623,14 @@ class dict_matrix():
             rv.set(col, self.rows[self_row_id][col] * \
                 other.rows[other_row_id][col] / const_div)
         return rv
-    
+
     def multiply_row_select(self, self_row_id, other, other_row_id, const_div=1):
         rv = dict_row(self.val_type)
         for col in self.rows[self_row_id]:
             if other_row_id in other[col]:
                 rv.set(col, self.rows[self_row_id][col] / const_div)
         return rv
-                
+
     def __div__(self, other):
         rv = dict_matrix(self.val_type)#, self.nrows, self.ncols)
         for row in self.rows:
@@ -646,7 +646,7 @@ class dict_matrix():
                 rvA.item_add(col, self.rows[row][col])
                 rvB.item_add(row, self.rows[row][col])
         return rvA, rvB
-        
+
     def sum(self, axis=None):
         if axis == 0:
             rv = dict_row(self.val_type)
@@ -661,7 +661,7 @@ class dict_matrix():
                 for col in self.rows[row]:
                     rv.item_add(row, self.rows[row][col])
             return rv
-        
+
         if not axis:
             rv = 0
             for row in self.rows:
@@ -677,15 +677,15 @@ class dict_matrix():
                 rv += self.rows[row][col]
                 rc += 1
         return rv / rc
-        
-              
+
+
     def log(self):
         rv = dict_matrix(float)#, self.nrows, self.ncols)
         for row in self.rows:
             for col in self.rows[row]:
                 rv.set(row, col, np.log(self.rows[row][col]))
         return rv
-    
+
     def mean(self):
         rv = 0.
         counter = 0
@@ -694,7 +694,7 @@ class dict_matrix():
                 rv += self.rows[row][col]
                 counter += 1
         return rv / counter
-   
+
     def log_gamma_sum(self):
         rv = 0
         for row in self.rows:
@@ -739,7 +739,7 @@ class dataset:
 
     def shares(self, user, item):
         f = set()
-        # for binary only 
+        # for binary only
         if self.binary:
             for friend in self.friends[user]:
                 if item in self.user_data[friend]:
@@ -749,7 +749,7 @@ class dataset:
                 if item in set([i for i,r in self.user_data[friend]]):
                     f.add(friend)
         return f
-                
+
     def read_ratings(self, model, filename):
         i = 0
         user_count = len(model.users)
@@ -781,7 +781,7 @@ class dataset:
             if user not in model.users:
                 model.users[user] = user_count#len(model.users)
                 user_count += 1
-            
+
             if item not in model.items:
                 model.items[item] = item_count#len(model.items)
                 item_count += 1
@@ -821,7 +821,7 @@ class dataset:
             items.append(model.items[item])
             ratings.append(rating)
             friends.append(self.friend_counts[model.users[user]][model.items[item]])
-            
+
             if not model.binary:
                 self.user_datav[model.users[user]].append((model.items[item], rating))
                 self.sparse_vratings.set(model.items[item], model.users[user], rating)
@@ -837,7 +837,7 @@ class dataset:
 
     def read_network(self, model, filename):
         print "reading network...."
-        
+
         for line in open(filename, 'r'):
             if ',' in line:
                 user, friend = tuple([int(x.strip()) for x in line.split(',')])
@@ -899,7 +899,7 @@ class dataset:
                     if model.undirected:
                         self.friends[friend].append(user)
                         self.friend_matrix.set(friend, user, True)
-                    
+
                     if model.binary:
                         for item in self.user_data[friend]:
                             self.friend_counts[user][item] += 1
