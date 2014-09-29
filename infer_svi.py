@@ -52,6 +52,8 @@ def infer(model, priors, params, data, dire=''):
     old_C = 1.0
     delta_C = 1e12
     delta_C_thresh = 1e-5 #TODO: find good default value and make it a command arg
+    if data.binary:
+        delta_C_thesh = 1e-10
 
     logf = open(join(dire, 'log.tsv'), 'w+')
     logf.write("iteration\tC\ttheta\tbeta\ttau\teta\tintercept\n") # ave values
@@ -63,7 +65,7 @@ def infer(model, priors, params, data, dire=''):
     items_seen_counts = defaultdict(int)
     batch_size = min(100000, len(data.train_triplets)) #0.1M
 
-    MF_converged = False
+    MF_converged = not model.MF
     while delta_C > delta_C_thresh: # not converged
         if delta_C < 10**(log(delta_C_thresh)/log(10)/2) and not MF_converged:
             MF_converged = True
@@ -144,6 +146,8 @@ def infer(model, priors, params, data, dire=''):
         params.set_to_priors(priors)
 
         iteration += 1
+
+    save_state(dire, iteration, model, params)
 
     logf.close()
 

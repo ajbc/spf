@@ -45,7 +45,7 @@ class BaselineStudy(multiprocessing.Process):
     def fit(self):
         return
 
-    def pred(self, user, item):
+    def pred(self, user, item, details=False):
         return self.lr.random()
 
     def eval(self):
@@ -103,7 +103,7 @@ class BaselineStudy(multiprocessing.Process):
                     crr += (1.0 / rank)
                     if found == 1:
                         first = rank
-                        rr += (1.0 / rank)
+                        rr = (1.0 / rank)
 
                 if rank == 1 or rank == 10 or rank == 100:
                     p[rank] = found / rank
@@ -149,9 +149,12 @@ class BaselineStudy(multiprocessing.Process):
 
 
 class PopularityStudy(BaselineStudy):
-    def pred(self, user, item):
+    def pred(self, user, item, details=False):
         return self.data.item_counts[item]
 
+from scipy.stats import mode
+def ave(L):
+    return mode(L)[0][0]
 
 class PFStudy(BaselineStudy):
     def fit(self):
@@ -161,10 +164,26 @@ class PFStudy(BaselineStudy):
         infer(model, priors, params, data, self.out_dir)
         self.params = params
 
-    def pred(self, user, item):
+    def pred(self, user, item, details=False):
         prediction = self.params.inter[self.data.items[item]]
         prediction += sum(self.params.theta[self.data.users[user]] * \
             self.params.beta[self.data.items[item]])
+        if details:
+            print '\tintercept', self.params.inter[self.data.items[item]]
+            mu = ave(self.params.theta[self.data.users[user]])
+            k = 0
+            for v in self.params.theta[self.data.users[user]]:
+                if v > mu:
+                    print '\ttheta',k,v
+                k += 1
+
+            mu = ave(self.params.beta[self.data.items[item]])
+            k = 0
+            for v in self.params.beta[self.data.items[item]]:
+                if v > mu:
+                    print '\tbeta',k,v
+                k += 1
+
         return prediction
 
 
@@ -178,16 +197,34 @@ class SPFStudy(BaselineStudy):
         self.model = model
         #TODO: duplicate with above, except trust arg!
 
-    def pred(self, user, item):
+    def pred(self, user, item, details=False):
         prediction = self.params.inter[self.data.items[item]]
         prediction += sum(self.params.theta[self.data.users[user]] * \
             self.params.beta[self.data.items[item]])
+        if details:
+            print '\tintercept', self.params.inter[self.data.items[item]]
+            mu = ave(self.params.theta[self.data.users[user]])
+            k = 0
+            for v in self.params.theta[self.data.users[user]]:
+                if v > mu:
+                    print '\ttheta',k,v
+                k += 1
+
+            mu = ave(self.params.beta[self.data.items[item]])
+            k = 0
+            for v in self.params.beta[self.data.items[item]]:
+                if v > mu:
+                    print '\tbeta',k,v
+                k += 1
 
         T = 0.0
         for vser in data.friends[data.users[user]]:
             rating = self.data.rating(vser, self.data.items[item])
             if rating != 0:
                 T += self.params.tau.get(self.data.users[user], vser) * rating
+                if details:
+                    print '\ttau', vser, self.params.tau.get(self.data.users[user], \
+                        vser), rating
 
         if not self.model.nofdiv and self.data.friend_counts[self.data.users[user]][self.data.items[item]] != 0:
             T /= self.data.friend_counts[self.data.users[user]][self.data.items[item]]
@@ -196,7 +233,45 @@ class SPFStudy(BaselineStudy):
 
         return prediction
 
-#TODO: add trust only
+
+class TrustStudy(BaselineStudy):
+    def fit(self):
+        model = model_settings(self.K, MF=False, trust=True, intercept=True)
+        priors = set_priors(model, self.data)
+        params = init_params(model, priors, self.data)
+        infer(model, priors, params, data, self.out_dir)
+        self.params = params
+        self.model = model
+        #TODO: duplicate with above, except MF arg!
+
+    def pred(self, user, item, details=False):
+        prediction = self.params.inter[self.data.items[item]]
+
+        T = 0.0
+        for vser in data.friends[data.users[user]]:
+            rating = self.data.rating(vser, self.data.items[item])
+            if rating != 0:
+                T += self.params.tau.get(self.data.users[user], vser) * rating
+                if details:
+                    print '\ttau', vser, self.params.tau.get(self.data.users[user], \
+                        vser), rating
+
+        if not self.model.nofdiv and self.data.friend_counts[self.data.users[user]][self.data.items[item]] != 0:
+            T /= self.data.friend_counts[self.data.users[user]][self.data.items[item]]
+
+        prediction += T
+
+        return prediction
+
+
+#class SoRecPFStudy(PFStudy):
+#    def fit(self):
+#        self.data = self
+
+
+
+
+
 
 def parse_args():
     #TODO: organize this a little better
@@ -261,6 +336,9 @@ if __name__ == '__main__':
     spf = SPFStudy(data, join(args.out_dir, 'SPF'), args.K)
     spf.start()
 
+    trust = TrustStudy(data, join(args.out_dir, 'trust'), args.K)
+    trust.start()
+
 
     ### write out per-use network properties
     fout = open(join(args.out_dir, "user_stats.csv"), 'w+')
@@ -281,6 +359,7 @@ if __name__ == '__main__':
     pop.join()
     pf.join()
     spf.join()
+    trust.join()
 
     ### aggregate results
     print "aggregate results here"

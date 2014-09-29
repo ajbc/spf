@@ -726,7 +726,7 @@ class dataset:
 
         if not binary:
             self.sparse_ratings = dict_matrix(int)
-            self.log_sparse_ratings = dict_matrix(int)
+            self.log_sparse_ratings = dict_matrix(float)
             self.sparse_vratings = dict_matrix(int)
 
         self.friends = defaultdict(list)
@@ -736,8 +736,17 @@ class dataset:
         self.user_data = defaultdict(list)
         self.item_data = defaultdict(list)
 
+    def sorec_copy(self):
+        dataset = dataset(self.users.copy(), self.items.copy(), self.binary, \
+            self.directed)
+
+        print "TODO"
+        return dataset
+
     def has_rating(self, user, item):
         #binary only
+        if not self.binary:
+            print 'Problem!!!'
         return (item in self.user_data[user] or item in self.user_datav[user])
 
     def shares(self, user, item):
