@@ -113,7 +113,7 @@ def get_log_likelihoods(model, params, data, test_set):
     predictions = get_predictions(model, params, data, test_set)
     likelihoods = np.log(predictions) * test_set.ratings - \
         np.log(factorial(test_set.ratings)) - predictions
-    likelihoods[np.isinf(likelihoods)] = 0
+    #likelihoods[np.isinf(likelihoods)] = 0
     #print "LIKELIHOODS"
     #print predictions[:10]
     #print test_set.ratings[:10]
