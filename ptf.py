@@ -836,7 +836,10 @@ class dataset:
             self.rating_count[1] += 1
             users.append(self.users[user])
             items.append(self.items[item])
-            ratings.append(rating)
+            if self.binary:
+                ratings.append(1)
+            else:
+                ratings.append(rating)
             friends.append(self.friend_counts[self.users[user]][self.items[item]])
 
             if not self.binary:
