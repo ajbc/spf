@@ -120,6 +120,7 @@ def get_log_likelihoods(model, params, data, test_set):
     predictions = get_predictions(model, params, data, test_set)
     likelihoods = np.log(predictions) * test_set.ratings - \
         np.log(factorial(test_set.ratings)) - predictions
+    likelihoods[np.isinf(likelihoods)] = 0
     #print "LIKELIHOODS"
     #print predictions[:10]
     #print test_set.ratings[:10]
@@ -189,13 +190,14 @@ def get_ave_likelihood(model, params, data, test_set):
         / test_set.size
 
 class model_settings:
-    def __init__(self, K, MF, trust, intercept, sorec=False):
+    def __init__(self, K, MF, trust, intercept, sorec=False, SVI=False):
         self.K = K
         self.MF = MF
         self.trust = trust
         self.intercept = intercept
         self.sorec = sorec
         self.nofdiv = False
+        self.SVI = SVI
 
     #@classmethod
     #def new(self, user_count, item_count, K, MF, trust, iat, intercept, users, items, undirected):
@@ -255,6 +257,7 @@ class parameters:
     def set_to_priors(self, priors):
         self.a_theta.fill(priors['a_theta'])
         self.b_theta.fill(priors['b_theta'])
+        self.a_beta_prev = self.a_beta.copy()
         self.a_beta.fill(priors['a_beta'])
         self.b_beta.fill(priors['b_beta'])
         self.a_tau = priors['a_tau'].copy()
@@ -301,7 +304,10 @@ class parameters:
 
         if model.MF:
             self.a_theta[user] += exp(log_phi_M + logmult)
-            self.a_beta[item] += exp(log_phi_M + logmult)#TODO for svi + log_user_scale)
+            if model.SVI:
+                self.a_beta[item] += exp(log_phi_M + logmult + log_user_scale)
+            else:
+                self.a_beta[item] += exp(log_phi_M + logmult)
             #self.a_beta[item] += exp(log_phi_M + logmult + log_user_scale)
         if model.trust and MF_converged:
             if phi_T.sum() != 0:
@@ -312,6 +318,8 @@ class parameters:
     def update_MF(self, model, data, user_scale=1.0, \
                 users_updated=False, \
                 items_updated=False, items_seen_counts=False, tau0=1, kappa=1):
+        #TODO: sets of users/items updated are always passed in
+        # they don't need defaults
         if users_updated == False:
             users_updated = set(data.users.values())
             items_updated = set(data.items.values())
@@ -326,16 +334,20 @@ class parameters:
                 log(self.b_theta)
 
         if model.MF:
+            '''if model.SVI:
+                b_beta = user_scale * self.theta[users].sum(axis=0) + \
+                    model.priors['b_beta']
+                rho = (items_seen_counts[item] + tau0) ** (-kappa)
+                for item in items_updated:
+                    self.b_beta[item] = (1 - rho) * self.b_beta[item] + \
+                        rho * (b_beta)
+            else:'''
             self.b_beta += self.theta.sum(axis=0)
-            #self.b_beta[list(items_updated)] += self.theta.sum(axis=0)
-            #self.b_beta[itms] += user_scale * self.theta[usrs].sum(axis=0)
-
 
         for item in items_updated:
-            if items_seen_counts:
-                rho = (items_seen_counts[item] + tau0) ** (-kappa)
-            else:
-                rho = 1
+            rho = (items_seen_counts[item] + tau0) ** (-kappa)
+            self.a_beta[item] = (1 - rho) * self.a_beta_prev[item] + \
+                rho * self.a_beta[item]
             self.beta[item] = (self.a_beta[item] / self.b_beta)
             self.logbeta[item] = psi(self.a_beta[item]) - log(self.b_beta)
 
@@ -736,6 +748,9 @@ class dataset:
         self.user_data = defaultdict(list)
         self.item_data = defaultdict(list)
 
+        self.connection_count = 0
+        self.rating_count = [0,0,0]
+
     def sorec_copy(self):
         dataset = dataset(self.users.copy(), self.items.copy(), self.binary, \
             self.directed)
@@ -782,6 +797,7 @@ class dataset:
 
             if rating == 0:# or counts[item] < 2:
                 continue
+            self.rating_count[0] += 1
             if self.binary:
                 #self.train_triplets.append((self.users[user], model.items[item]))
                 self.train_triplets.append((user,item))
@@ -826,6 +842,7 @@ class dataset:
                 continue
             if (user_set and user not in user_set) or (item_set and item not in item_set):
                 continue
+            self.rating_count[1] += 1
             users.append(self.users[user])
             items.append(self.items[item])
             ratings.append(rating)
@@ -905,6 +922,9 @@ class dataset:
             if friend not in self.friends[user] and user != friend:
                 self.friends[user].append(friend)
                 self.friend_matrix.set(user, friend, True)
+
+                self.connection_count += 1
+
                 if not self.directed:
                     self.friends[friend].append(user)
                     self.friend_matrix.set(friend, user, True)
@@ -938,6 +958,8 @@ class dataset:
 
             if user not in self.users or item not in self.items:
                 continue
+
+            self.rating_count[2] += 1
 
             if self.binary:
                 self.test_user_data[user].add(item)

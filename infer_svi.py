@@ -20,7 +20,7 @@ from ptf import *
 
 tau0 = 1024
 kappa = 0.7
-user_sample_count = 100
+user_sample_count = 500
 user_scale = 1
 
 def save_state(dire, iteration, model, params):
@@ -48,12 +48,17 @@ def log_state(f, iteration, params, likelihood):
 
 
 # infer latent variables
-def infer(model, priors, params, data, dire=''):
+def infer(model, priors, params, data, dire='', rnd=False):
+    if not rnd:
+        rnd = random.Random()
     old_C = 1.0
     delta_C = 1e12
     delta_C_thresh = 1e-5 #TODO: find good default value and make it a command arg
     if data.binary:
         delta_C_thesh = 1e-10
+    if model.SVI:
+        delta_C = [delta_C] * 10
+        delta_C_thresh /= 100
 
     logf = open(join(dire, 'log.tsv'), 'w+')
     logf.write("iteration\tC\ttheta\tbeta\ttau\teta\tintercept\n") # ave values
@@ -66,15 +71,21 @@ def infer(model, priors, params, data, dire=''):
     batch_size = min(100000, len(data.train_triplets)) #0.1M
 
     MF_converged = not model.MF
-    while delta_C > delta_C_thresh: # not converged
-        if delta_C < 10**(log(delta_C_thresh)/log(10)/2) and not MF_converged:
+    while (not model.SVI and delta_C > delta_C_thresh) or \
+        (model.SVI and sum(delta_C)/10 > delta_C_thresh): # not converged
+        if (delta_C[0] if model.SVI else delta_C) < \
+            10**(log(delta_C_thresh)/log(10)/2) and not MF_converged:
             MF_converged = True
             print "MF converged"
 
         #user_sample_count = len(model.users)
-        users_updated_orig = set(data.users.keys())#set(random.sample(model.users.values(), user_sample_count))
+        if model.SVI:
+            users_updated_orig = set(rnd.sample(data.users.keys(), \
+                user_sample_count))
+            user_scale = len(data.users) / user_sample_count
+        else:
+            users_updated_orig = set(data.users.keys())
         users_updated = set([data.users[u] for u in users_updated_orig])
-        user_scale = len(data.users) / user_sample_count
 
         #print len(users_updated)
         training_batch = [datum for datum in data.train_triplets\
@@ -122,14 +133,18 @@ def infer(model, priors, params, data, dire=''):
             for i in xrange(len(itms)):
                 if items_seen_counts[itms[i]] == 1:
                     rho[i] = 1
-            antes = params.inter[itms][0]
-            params.inter[itms] = params.a_inter[itms] / params.b_inter[itms]
-                #SVI
-                #params.inter[itms] * (1-rho) + \
-                #rho * (params.a_inter[itms] / params.b_inter[itms])
+            if model.SVI:
+                params.inter[itms] * (1-rho) + \
+                    rho * (params.a_inter[itms] / params.b_inter[itms])
+            else:
+                params.inter[itms] = params.a_inter[itms] / params.b_inter[itms]
 
         C = get_elbo(model, priors, params, data) #TODO: rename; it's not the elbo!
-        delta_C = abs((old_C - C) / old_C)
+        if model.SVI:
+            delta_C.pop(0)
+            delta_C.append(abs((old_C - C) / old_C))
+        else:
+            delta_C = abs((old_C - C) / old_C)
         old_C = C
 
         # save state regularly
@@ -137,7 +152,10 @@ def infer(model, priors, params, data, dire=''):
             if iteration != 0:
                 save_state(dire, iteration, model, params)
             tau_ave = 0 if type(params.tau)==type(params.inter) else params.tau.get_ave()
-            print iteration, C, delta_C
+            if model.SVI:
+                print iteration, C, delta_C[-1], (sum(delta_C)/10)
+            else:
+                print iteration, C, delta_C
             logf.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
                 (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
                 tau_ave, \
