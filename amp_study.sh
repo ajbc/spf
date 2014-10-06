@@ -25,8 +25,8 @@ for ((amp=0; amp<=100;amp=amp+10)); do
     (python2.7 study.py $1/$amp --out $2/$amp --binary --K $K > $2/$amp/py-study.out 2> $2/$amp/py-study.err &)
 
     echo " * reformatting input for baseline"
-    python to_list_form.py $1/$amp
-    python to_sorec_list_form.py $1/$amp
+    python dat/src/to_list_form.py $1/$amp
+    python dat/src/to_sorec_list_form.py $1/$amp
 
     echo " * running baselines"
     mkdir $2/$amp/MF

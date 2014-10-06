@@ -25,8 +25,8 @@ echo " * trying to build code for a baseline"
 #cd ctr; make; cd ../
 
 echo " * reformatting input for baseline"
-python to_list_form.py $1
-python to_sorec_list_form.py $1
+python dat/src/to_list_form.py $1
+python dat/src/to_sorec_list_form.py $1
 
 echo " * running baselines"
 mkdir $2/MF

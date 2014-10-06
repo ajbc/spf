@@ -26,11 +26,12 @@ def get_eval_sets(data):
 ### Model study classes ###
 
 class BaselineStudy(multiprocessing.Process):
-    def __init__(self, data, out_dir, K=0):
+    def __init__(self, data, out_dir, K=0, SVI=False):
         multiprocessing.Process.__init__(self)
         self.data = data
         self.out_dir = out_dir
         self.K = K
+        self.SVI = SVI
 
         # set up local random generation
         self.lr = random.Random()
@@ -158,10 +159,11 @@ def ave(L):
 
 class PFStudy(BaselineStudy):
     def fit(self):
-        model = model_settings(self.K, MF=True, trust=False, intercept=True)
+        model = model_settings(self.K, MF=True, trust=False, intercept=True, \
+            SVI=self.SVI)
         priors = set_priors(model, self.data)
         params = init_params(model, priors, self.data)
-        infer(model, priors, params, data, self.out_dir)
+        infer(model, priors, params, data, self.out_dir, self.lr)
         self.params = params
 
     def pred(self, user, item, details=False):
@@ -189,10 +191,11 @@ class PFStudy(BaselineStudy):
 
 class SPFStudy(BaselineStudy):
     def fit(self):
-        model = model_settings(self.K, MF=True, trust=True, intercept=True)
+        model = model_settings(self.K, MF=True, trust=True, intercept=True, \
+            SVI=self.SVI)
         priors = set_priors(model, self.data)
         params = init_params(model, priors, self.data)
-        infer(model, priors, params, data, self.out_dir)
+        infer(model, priors, params, data, self.out_dir, self.lr)
         self.params = params
         self.model = model
         #TODO: duplicate with above, except trust arg!
@@ -236,10 +239,11 @@ class SPFStudy(BaselineStudy):
 
 class TrustStudy(BaselineStudy):
     def fit(self):
-        model = model_settings(self.K, MF=False, trust=True, intercept=True)
+        model = model_settings(self.K, MF=False, trust=True, intercept=True, \
+            SVI=self.SVI)
         priors = set_priors(model, self.data)
         params = init_params(model, priors, self.data)
-        infer(model, priors, params, data, self.out_dir)
+        infer(model, priors, params, data, self.out_dir, self.lr)
         self.params = params
         self.model = model
         #TODO: duplicate with above, except MF arg!
@@ -330,27 +334,37 @@ if __name__ == '__main__':
     pop = PopularityStudy(data, join(args.out_dir, 'popularity'))
     pop.start()
 
-    pf = PFStudy(data, join(args.out_dir, 'PF'), args.K)
+    pf = PFStudy(data, join(args.out_dir, 'PF'), args.K, args.svi)
     pf.start()
 
-    spf = SPFStudy(data, join(args.out_dir, 'SPF'), args.K)
+    spf = SPFStudy(data, join(args.out_dir, 'SPF'), args.K, args.svi)
     spf.start()
 
-    trust = TrustStudy(data, join(args.out_dir, 'trust'), args.K)
+    trust = TrustStudy(data, join(args.out_dir, 'trust'), args.K, args.svi)
     trust.start()
 
 
-    ### write out per-use network properties
+    ### write out per-user network properties
     fout = open(join(args.out_dir, "user_stats.csv"), 'w+')
-    fout.write("user.id,num.heldout,degree,interconnectivity\n")
+    fout.write("user.id,num.train,num.heldout,degree,interconnectivity\n")
     users, items = get_eval_sets(data)
     for user in users:
         num_heldout = data.heldout_count(user)
         if num_heldout != 0:
+            num_train = len(data.user_data[user])
             degree = data.friend_count(user)
             interconnectivity = data.interconnectivity(user)
-            fout.write("%d,%d,%d,%d\n" % \
-                (user, num_heldout, degree, interconnectivity))
+            fout.write("%d,%d,%d,%d,%d\n" % \
+                (user, num_train, num_heldout, degree, interconnectivity))
+    fout.close()
+
+    ### write out general data stats
+    fout = open(join(args.out_dir, "data_stats.dat"), 'w+')
+    fout.write("num users:\t%d\n" % len(data.users))
+    fout.write("num items:\t%d\n" % len(data.items))
+    fout.write("num ratings:\t%d\t%d\t%d\n" % \
+        (data.rating_count[0], data.rating_count[1], data.rating_count[2]))
+    fout.write("network connections:\t%d\n" % data.connection_count)
     fout.close()
 
 
