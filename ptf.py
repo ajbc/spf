@@ -17,11 +17,6 @@ def save_state(dire, iteration, model, params):
     fname = "%s-iter%d.out" % (dire + '/model', iteration)
     ptfstore.dump(fname, model, params)
 
-def log_state(f, iteration, params, likelihood):
-    f.write("%d\t%e\t%e\t%e\t%e\t%e\n" % (iteration, likelihood, \
-        params.theta.mean(), params.beta.mean(), params.tau.mean(),
-        params.inter.mean()))
-
 def get_predictions(model, params, data, test_set):
     preds = np.zeros(len(test_set.users))
 

@@ -41,12 +41,6 @@ def save_state(dire, iteration, model, params):
         os.remove(join(dire, oldstate))
 
 
-def log_state(f, iteration, params, likelihood):
-    f.write("%d\t%e\t%e\t%e\t%e\t%e\n" % (iteration, likelihood, \
-        params.theta.mean(), params.beta.mean(), params.tau.mean(),
-        params.inter.mean()))
-
-
 # infer latent variables
 def infer(model, priors, params, data, dire='', rnd=False):
     if not rnd:
