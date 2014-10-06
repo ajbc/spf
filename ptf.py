@@ -18,9 +18,9 @@ def save_state(dire, iteration, model, params):
     ptfstore.dump(fname, model, params)
 
 def log_state(f, iteration, params, likelihood):
-    f.write("%d\t%e\t%e\t%e\t%e\t%e\t%e\n" % (iteration, likelihood, \
+    f.write("%d\t%e\t%e\t%e\t%e\t%e\n" % (iteration, likelihood, \
         params.theta.mean(), params.beta.mean(), params.tau.mean(),
-        params.eta, params.inter.mean()))
+        params.inter.mean()))
 
 def get_predictions(model, params, data, test_set):
     preds = np.zeros(len(test_set.users))
@@ -53,8 +53,6 @@ def get_predictions(model, params, data, test_set):
 
             if data.friend_counts[user][item] != 0 and not model.nofdiv:
                 T[i] /= data.friend_counts[user][item] #NOFDIV
-        #for i in range(10):
-        #    print "<%.3f, %.3f, %.3f, %.3f>   %.3f" % (M[i], T[i], params.eta * M[i] * T[i], params.inter[test_set.items][i], M[i]+ T[i]+ params.eta * M[i] * T[i] + params.inter[test_set.items][i])
 
     if model.trust:
         preds += T
@@ -222,7 +220,6 @@ class parameters:
         print "   initializing model parameters"
         self.tau = dict_matrix(float, data.user_count, data.user_count)
         self.logtau = dict_matrix(float, data.user_count, data.user_count)
-        self.eta = 0
         self.inter = np.zeros(data.item_count)
         self.theta = np.zeros((data.user_count, model.K))
         self.logtheta = np.zeros((data.user_count, model.K))
@@ -252,7 +249,6 @@ class parameters:
                 self.inter = np.ones(data.item_count) * 0.1
             else:
                 self.inter = np.zeros(data.item_count)
-            self.eta = 0.1 #TODO: init from args
 
     def set_to_priors(self, priors):
         self.a_theta.fill(priors['a_theta'])

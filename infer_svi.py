@@ -42,9 +42,9 @@ def save_state(dire, iteration, model, params):
 
 
 def log_state(f, iteration, params, likelihood):
-    f.write("%d\t%e\t%e\t%e\t%e\t%e\t%e\n" % (iteration, likelihood, \
+    f.write("%d\t%e\t%e\t%e\t%e\t%e\n" % (iteration, likelihood, \
         params.theta.mean(), params.beta.mean(), params.tau.mean(),
-        params.eta, params.inter.mean()))
+        params.inter.mean()))
 
 
 # infer latent variables
@@ -61,7 +61,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
         delta_C_thresh /= 100
 
     logf = open(join(dire, 'log.tsv'), 'w+')
-    logf.write("iteration\tC\ttheta\tbeta\ttau\teta\tintercept\n") # ave values
+    logf.write("iteration\tC\ttheta\tbeta\ttau\tintercept\n") # ave values
 
     iteration = 0
 
@@ -156,10 +156,10 @@ def infer(model, priors, params, data, dire='', rnd=False):
                 print iteration, C, delta_C[-1], (sum(delta_C)/10)
             else:
                 print iteration, C, delta_C
-            logf.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
+            logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
                 (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
                 tau_ave, \
-                params.eta,params.inter.sum()/data.item_count))
+                params.inter.sum()/data.item_count))
 
         params.set_to_priors(priors)
 
