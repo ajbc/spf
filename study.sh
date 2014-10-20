@@ -51,7 +51,7 @@ python dat/src/to_sorec_list_form.py $3/data/
 echo " * running baselines"
 mkdir $3/fits/MF
 mkdir $3/fits/SoRec
-./ctr/ctr --directory $3/fits/MF --user $3/data/users.dat --item $3/data/items.dat --num_factors $K
+./ctr/ctr --directory $3/fits/MF --user $3/data/users.dat --item $3/data/items.dat --num_factors $K 
 ./ctr/ctr --directory $3/fits/SoRec --user $3/data/users_sorec.dat --item $3/data/items_sorec.dat --num_factors $K
 
 echo " * evaluating baselines"

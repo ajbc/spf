@@ -34,10 +34,12 @@ user_mae = 0
 p = defaultdict(float) # precision
 
 USER = -1
+fout_userD = open(join(output_dir, 'user_10047490.tsv'), 'w+')
 for line in input_file:
     user, item, rating, pred, rank = line.split(',')
     user = int(user.strip())
     if user not in users:
+        print user
         if USER != -1:
             # log old user
             rmse += user_rmse
@@ -50,15 +52,16 @@ for line in input_file:
             # per user stats
             if found == 0:
                 fout_user.write("%d\t-1\t-1\t-1\t0\t0\t0\t0\t0\n" % USER)
-                continue
-            fout_user.write("%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\n" %
-                (USER, (user_rmse/found), (user_mae/found), first, rr, crr, \
-                p[1], p[10], p[100]))
+                #    continue
+            else:#if found != 0:
+                fout_user.write("%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\n" %
+                    (USER, (user_rmse/found), (user_mae/found), first, rr, \
+                    crr, p[1], p[10], p[100]))
+            U += 1
 
         # prep for new user
         users.add(user)
         USER = user
-        U += 1
 
         found = 0.0 # float so division plays nice
         crr = 0
@@ -70,11 +73,11 @@ for line in input_file:
 
     rating = int(rating.strip())
 
+    rank = int(rank.strip())
+    prediction = float(pred.strip())
     if rating != 0:
         found += 1
-        rank = int(rank.strip())
 
-        prediction = float(pred.strip())
 
         user_rmse += (rating - prediction)**2
         user_mae += abs(rating - prediction)
@@ -86,8 +89,17 @@ for line in input_file:
     if rank == 1 or rank == 10 or rank == 100:
         p[rank] = found / rank
         ave_p[rank] += p[rank]
+    item = int(item)
+    if user == 10047490:
+        fout_userD.write("%d\t%s %d\t%f\n" % (rank, "H" if rating != 0 else " ", item, prediction))
+        '''fout.write('\t%f\n' % self.params.inter[self.data.items[item]])
+        fout.write('\t%f:' % (sum(self.params.theta[self.data.users[user]] * \
+                    self.params.beta[self.data.items[item]])))
+        for comp in self.params.theta[self.data.users[user]] * self.params.beta[self.data.items[item]]:
+            fout.write(' %f' % comp)
+        fout.write('\n')'''
 
-U += 1
+
 # log old user
 rmse += user_rmse
 mae += user_mae

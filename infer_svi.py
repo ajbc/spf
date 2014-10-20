@@ -49,7 +49,8 @@ def infer(model, priors, params, data, dire='', rnd=False):
     delta_C = 1e12
     delta_C_thresh = 1e-5 #TODO: find good default value and make it a command arg
     if data.binary:
-        delta_C_thesh = 1e-10
+        print "BINARY!"
+        delta_C_thresh = 1e-5
     if model.SVI:
         delta_C = [delta_C] * 10
         delta_C_thresh /= 100
@@ -64,7 +65,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
     items_seen_counts = defaultdict(int)
     batch_size = min(100000, len(data.train_triplets)) #0.1M
 
-    MF_converged = not model.MF
+    MF_converged = True #not model.MF
     while (not model.SVI and delta_C > delta_C_thresh) or \
         (model.SVI and sum(delta_C)/10 > delta_C_thresh): # not converged
         if (delta_C[0] if model.SVI else delta_C) < \
@@ -116,6 +117,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
         # only need to update tau from default (sum of ratings)
         # when we have an interaction term
         if MF_converged:
+            #print "not updating tf"
             params.update_TF(model, data, user_scale, \
                 users_updated, iteration, tau0, kappa)
 
@@ -128,7 +130,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
                 if items_seen_counts[itms[i]] == 1:
                     rho[i] = 1
             if model.SVI:
-                params.inter[itms] * (1-rho) + \
+                params.inter[itms] = params.inter[itms] * (1-rho) + \
                     rho * (params.a_inter[itms] / params.b_inter[itms])
             else:
                 params.inter[itms] = params.a_inter[itms] / params.b_inter[itms]
@@ -150,16 +152,32 @@ def infer(model, priors, params, data, dire='', rnd=False):
                 print iteration, C, delta_C[-1], (sum(delta_C)/10)
             else:
                 print iteration, C, delta_C
-            logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
-                (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
-                tau_ave, \
-                params.inter.sum()/data.item_count))
+        logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
+            (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
+            tau_ave, \
+            params.inter.sum()/data.item_count))
 
         params.set_to_priors(priors)
 
         iteration += 1
 
     save_state(dire, iteration, model, params)
+    logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
+        (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
+        tau_ave, \
+        params.inter.sum()/data.item_count))
+
+    if model.trust:
+        tauf = open(join(dire, 'tau_log.tsv'), 'w+')
+        tauf.write("user\tfriend\ttau\n")
+        reverse_map = {}
+        for user in data.users:
+            reverse_map[data.users[user]] = user
+        for user in data.users:
+            for friend in data.friends[data.users[user]]:
+                tau = params.tau.rows[data.users[user]][friend]
+                tauf.write("%d\t%d\t%f\n" % (user, reverse_map[friend], tau))
+        tauf.close()
 
     logf.close()
 
@@ -289,8 +307,8 @@ def set_priors(model, data, \
     priors['b_beta'] = b_beta
 
     # this keeps tau small by default
-    priors['a_tau'] = data.friend_matrix.const_multiply(a_tau * 1e-6)
-    priors['b_tau'] = data.friend_matrix.const_multiply(b_tau * 1e-3)
+    priors['a_tau'] = data.friend_matrix.const_multiply(a_tau)
+    priors['b_tau'] = data.friend_matrix.const_multiply(b_tau*1e-3)#data.item_count)#b_tau * 1e-3)
 
     #TODO: parse these from args?
     priors['a_inter'] = 1e-30
@@ -301,17 +319,25 @@ def set_priors(model, data, \
         user_weighted_ratings = dict_matrix(float, data.user_count, data.user_count)
 
         for user in data.users.values():
+            if user == 35:
+                print "setting up b_tau priors for 35"
+            #u_items = set(data.user_data[user])
             for vser in data.friends[user]:
                 if data.binary:
+                    #for item in set(data.user_data[vser]) & u_items:
                     for item in data.user_data[vser]:
                         user_weighted_ratings.item_add(user, vser, \
+                            1.0 if model.nofdiv else \
                             1.0 / data.friend_counts[user][item])
                 else:
                     for item, rating in data.user_data[vser]:
+                        #if item in u_items:
                         user_weighted_ratings.item_add(user, vser, \
+                            1.0 * rating if model.nofdiv else \
                             1.0 * rating / \
                             data.friend_counts[user][item])
             priors['b_tau'] += user_weighted_ratings
+            #priors['a_tau'] += user_weighted_ratings # does well, but not right
 
     return priors
 

@@ -9,7 +9,7 @@ from os.path import isfile, join
 
 data_stem = sys.argv[1]
 fit_stem = sys.argv[2]
-K = int(sys.argv[3]) + 1 # for intercept 1 is added
+K = int(sys.argv[3]) #+ 1 # for intercept 1 is added INTERTAG
 #TODO: add non-binary option
 
 users = {}

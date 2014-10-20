@@ -66,7 +66,7 @@ void c_ctr::read_init_information(const char* theta_init_path,
 void c_ctr::set_model_parameters(int num_factors, 
                                  int num_users, 
                                  int num_items) {
-  m_num_factors = num_factors + 1; // per item intercept PPI
+  m_num_factors = num_factors;
   m_num_users = num_users;
   m_num_items = num_items;
 }
@@ -95,7 +95,7 @@ void c_ctr::stochastic_learn_map_estimate(const c_data* users, const c_data* ite
                                const char* directory) {
   // init model parameters
   printf("\nrunning stochastic learning ...\n");
-  printf("initializing the model ... (SLME)\n");
+  printf("initializing the model ...\n");
   init_model(param->ctr_run);
 
   // filename
@@ -394,7 +394,7 @@ void c_ctr::learn_map_estimate(const c_data* users, const c_data* items,
                                const c_corpus* c, const ctr_hyperparameter* param,
                                const char* directory) {
   // init model parameters
-  printf("\ninitializing the model ... (LME)\n");
+  printf("\ninitializing the model ...\n");
   init_model(param->ctr_run);
 
   // filename
@@ -413,6 +413,7 @@ void c_ctr::learn_map_estimate(const c_data* users, const c_data* items,
   sprintf(name, "%s/state.log", directory);
   FILE* file = fopen(name, "w");
   fprintf(file, "iter time likelihood converge\n");
+
 
   /* alloc auxiliary variables */
   gsl_matrix* XX = gsl_matrix_alloc(m_num_factors, m_num_factors);
@@ -446,13 +447,11 @@ void c_ctr::learn_map_estimate(const c_data* users, const c_data* items,
   double a_minus_b = param->a - param->b;
 
   while ((iter < param->max_iter and converge > 1e-4 ) or iter < min_iter) {
-    //printf("\niter %d\n", iter);
 
     likelihood_old = likelihood;
     likelihood = 0.0;
 
     // update U
-    //printf("\tupdate U\n");
     gsl_matrix_set_zero(XX);
     for (j = 0; j < m_num_items; j ++) {
       m = items->m_vec_len[j];
@@ -481,7 +480,6 @@ void c_ctr::learn_map_estimate(const c_data* users, const c_data* items,
 
         gsl_vector_view u = gsl_matrix_row(m_U, i);
         matrix_vector_solve(A, x, &(u.vector));
-        vset(&(u.vector), 0, 1.0);
 
         // update the likelihood
         gsl_blas_ddot(&u.vector, &u.vector, &result);
@@ -492,7 +490,6 @@ void c_ctr::learn_map_estimate(const c_data* users, const c_data* items,
     if (param->lda_regression) break; // one iteration is enough for lda-regression
 
     // update V
-    //printf("\tupdate V\n");
     if (param->ctr_run && param->theta_opt) gsl_matrix_set_zero(word_ss);
 
     gsl_matrix_set_zero(XX);
@@ -564,7 +561,6 @@ void c_ctr::learn_map_estimate(const c_data* users, const c_data* items,
         }
       }
     }
-    //printf("\tupdaing other stuff we dont care about\n");
 
     // update beta if needed
     if (param->ctr_run && param->theta_opt) {

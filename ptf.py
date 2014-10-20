@@ -190,6 +190,7 @@ class model_settings:
         self.intercept = intercept
         self.sorec = sorec
         self.nofdiv = False
+        self.nofdiv = True #new!
         self.SVI = SVI
 
     #@classmethod
@@ -230,8 +231,9 @@ class parameters:
                 self.b_theta = np.ones((data.user_count, model.K))
                 self.b_beta = np.ones((data.item_count, model.K))
                 #self.tau = data.friend_matrix.copy(mult=10.0)
-                self.tau = data.friend_matrix.copy()#mult=0.1)
-                self.logtau = data.friend_matrix.copy()#mult=0.1)
+                #M = 100.0
+                self.tau = data.friend_matrix.copy()#mult=M)
+                self.logtau = data.friend_matrix.copy()#mult=np.log(M))
             else:
                 self.b_theta = np.ones((data.user_count, model.K)) #TODO: do this outside if
                 self.b_beta = np.ones((data.item_count, model.K))
@@ -242,6 +244,9 @@ class parameters:
 
             if model.intercept:
                 self.inter = np.ones(data.item_count) * 0.1
+                #self.b_inter = np.zeros(data.item_count)
+                #for item in data.items:
+                #    self.b_inter[data.items[item]] = data.item_counts[item]
             else:
                 self.inter = np.zeros(data.item_count)
 
@@ -309,6 +314,9 @@ class parameters:
     def update_MF(self, model, data, user_scale=1.0, \
                 users_updated=False, \
                 items_updated=False, items_seen_counts=False, tau0=1, kappa=1):
+        if not model.MF:
+            return
+
         #TODO: sets of users/items updated are always passed in
         # they don't need defaults
         if users_updated == False:
@@ -316,29 +324,20 @@ class parameters:
             items_updated = set(data.items.values())
 
         usrs = list(users_updated)
-        if model.MF:
-            self.b_theta += self.beta.sum(axis=0)
+        self.b_theta += self.beta.sum(axis=0)
 
         for user in users_updated:
             self.theta[user] = self.a_theta[user] / self.b_theta
             self.logtheta[user] = psi(self.a_theta[user]) - \
                 log(self.b_theta)
 
-        if model.MF:
-            '''if model.SVI:
-                b_beta = user_scale * self.theta[users].sum(axis=0) + \
-                    model.priors['b_beta']
-                rho = (items_seen_counts[item] + tau0) ** (-kappa)
-                for item in items_updated:
-                    self.b_beta[item] = (1 - rho) * self.b_beta[item] + \
-                        rho * (b_beta)
-            else:'''
-            self.b_beta += self.theta.sum(axis=0)
+        self.b_beta += self.theta.sum(axis=0)
 
         for item in items_updated:
-            rho = (items_seen_counts[item] + tau0) ** (-kappa)
-            self.a_beta[item] = (1 - rho) * self.a_beta_prev[item] + \
-                rho * self.a_beta[item]
+            if model.SVI:
+                rho = (items_seen_counts[item] + tau0) ** (-kappa)
+                self.a_beta[item] = (1 - rho) * self.a_beta_prev[item] + \
+                    rho * self.a_beta[item]
             self.beta[item] = (self.a_beta[item] / self.b_beta)
             self.logbeta[item] = psi(self.a_beta[item]) - log(self.b_beta)
 
@@ -349,6 +348,11 @@ class parameters:
 
         if model.trust:
             self.tau = self.a_tau / self.b_tau
+
+            #print "a tau 35"
+            #print self.a_tau.rows[data.users[35]]
+            #print "b tau 35"
+            #print self.b_tau.rows[data.users[35]]
             self.logtau = self.a_tau.psi() - log(self.b_tau)
 
 
@@ -955,10 +959,11 @@ class dataset:
 
             self.rating_count[2] += 1
 
-            if self.binary:
-                self.test_user_data[user].add(item)
-            else:
-                self.test_user_data[user][item] = rating
+            if item not in self.user_data[user]:
+                if self.binary:
+                    self.test_user_data[user].add(item)
+                else:
+                    self.test_user_data[user][item] = rating
 
     def heldout_count(self, user):
         return len(self.test_user_data[user])
