@@ -21,8 +21,7 @@ for line in open(join(data_stem, "item_map_sorec.dat"), 'r'):
     item, id = [int(i.strip()) for i in line.split(',')]
     items[item] = id
 
-user_data_train = defaultdict(dict)
-item_pop = defaultdict(int)
+user_data_train = defaultdict(set)
 for line in open(join(data_stem, "train.tsv"), 'r'):
     triplet = tuple([int(x.strip()) for x in line.split('\t')])
     user, item, rating = triplet
@@ -40,8 +39,20 @@ for line in open(join(data_stem, "train.tsv"), 'r'):
     if item not in items:
         continue
 
-    user_data_train[users[user]][items[item]] = 1 # binary only
-    item_pop[items[item]] += 1
+    user_data_train[user].add(item)
+
+for line in open(join(data_stem, "validation.tsv"), 'r'):
+    triplet = tuple([int(x.strip()) for x in line.split('\t')])
+    user, item, rating = triplet
+
+    if rating == 0:
+        continue
+    if user not in users:
+        continue
+    if item not in items:
+        continue
+
+    user_data_train[user].add(item)
 
 
 #if model.trust or model.iat:
@@ -85,7 +96,6 @@ print len(users)
 #print "subsetted item an users done."
 
 # read in relevant test data
-test_ratings = [] #dict_matrix(int, len(users_set), len(items_set))
 user_data = defaultdict(dict)
 for line in open(join(data_stem, "test.tsv"), 'r'):
     user, item, rating = \
@@ -95,15 +105,14 @@ for line in open(join(data_stem, "test.tsv"), 'r'):
     #if (users_set and user not in users_set) or (items_set and item not in items_set):
     #    continue
     if rating != 0:
-        test_ratings.append((users[user], items[item], rating))
-        user_data[users[user]][items[item]] = rating
+        user_data[user][item] = rating
 
 print "evaluating predictions for each user-item pair"
 
 print "creating rankings for each user..."
 f = open(join(fit_stem, "rankings.out"), 'w+')
 for user in users:
-    if users[user] not in user_data: # ignore users with no heldout
+    if user not in user_data: # ignore users with no heldout
         continue
     #print user
     preds = {}
@@ -112,11 +121,11 @@ for user in users:
 
     rank = 1
     for item in sorted(preds, key=lambda i:-preds[i]):
-        if items[item] in user_data_train[users[user]]:
+        if item in user_data_train[user]:
             continue
         pred = preds[item]
-        rating = user_data[users[user]][items[item]] if items[item] in \
-            user_data[users[user]] else 0
+        rating = user_data[user][item] if item in \
+            user_data[user] else 0
         f.write("%d, %d, %d, %f, %d\n" % \
             (user, item, rating, pred, rank))
         rank += 1

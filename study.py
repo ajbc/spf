@@ -78,18 +78,22 @@ class BaselineStudy(multiprocessing.Process):
         fout_items.write("item.id\theldout.count\tintercept\tpopularity\tcrr\tave.rr\n")
         item_crr = defaultdict(float)
         item_count = defaultdict(float)
+        fout_rank = open(join(self.out_dir, 'ranking.out'), 'w+') #TODO: not needed; only for debugging
+        fout_rank.write("user, item, rating, prediction, rank\n")
 
-        fout_userD = open(join(self.out_dir, 'user_10047490.tsv'), 'w+')
-
-        for user in users:
+        #for user in users:
+        for user in self.data.test_user_data:
+            if user == 838:
+                print 'HEREREREE!'
             num_heldout = self.data.heldout_count(user)
-            if num_heldout == 0:
-                continue
+            #if num_heldout == 0:
+            #    continue
             U += 1
 
             predictions = {}
             for item in items:
-                predictions[item] = self.pred(user, item)
+                if data.items[item] not in self.data.user_data[data.users[user]] and data.items[item] not in self.data.user_datav[data.users[user]]:
+                    predictions[item] = self.pred(user, item)
 
             found = 0.0 # float so division plays nice
             rank = 0
@@ -105,9 +109,7 @@ class BaselineStudy(multiprocessing.Process):
             for item in sorted(predictions, key=lambda x: -predictions[x]):
                 rating = self.data.test_rating(user, item)
                 rank += 1
-                if user == 10047490:
-                    fout_userD.write("%d\t%s %d\t%f\n" % (rank, "H" if rating != 0 else " ", item, predictions[item]))
-                    self.printWhy(user,item, fout_userD)
+                fout_rank.write("%d, %d, %d, %f, %d\n" % (user, item, rating, predictions[item], rank))
 
                 if rating != 0:
                     found += 1

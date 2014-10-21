@@ -9,8 +9,7 @@ from os.path import isfile, join
 
 data_stem = sys.argv[1]
 fit_stem = sys.argv[2]
-K = int(sys.argv[3]) #+ 1 # for intercept 1 is added INTERTAG
-#TODO: add non-binary option
+K = int(sys.argv[3])
 
 users = {}
 items = {}
@@ -21,8 +20,7 @@ for line in open(join(data_stem, "item_map.dat"), 'r'):
     item, id = [int(i.strip()) for i in line.split(',')]
     items[item] = id
 
-user_data_train = defaultdict(dict)
-item_pop = defaultdict(int)
+user_data_train = defaultdict(set)
 for line in open(join(data_stem, "train.tsv"), 'r'):
     triplet = tuple([int(x.strip()) for x in line.split('\t')])
     user, item, rating = triplet
@@ -40,9 +38,20 @@ for line in open(join(data_stem, "train.tsv"), 'r'):
     if item not in items:
         continue
 
-    user_data_train[users[user]][items[item]] = 1 # binary only
-    item_pop[items[item]] += 1
+    user_data_train[user].add(item)
 
+for line in open(join(data_stem, "validation.tsv"), 'r'):
+    triplet = tuple([int(x.strip()) for x in line.split('\t')])
+    user, item, rating = triplet
+
+    if rating == 0:
+        continue
+    if user not in users:
+        continue
+    if item not in items:
+        continue
+
+    user_data_train[user].add(item)
 
 #if model.trust or model.iat:
 #    data.read_network(model, data_stem + "/network.tsv")
@@ -57,16 +66,15 @@ fV = open(join(fit_stem, 'final-V.dat'))
 i = 0
 for line in fU:
     theta[i,:] = [float(x.strip()) for x in line.strip().split(' ')]
+    #print i
     i += 1
-    if i >= len(users):
+    if i > len(users):
         print "more lines than users"
         break
 i = 0
 for line in fV:
-    if i >= len(items):
-        break
     beta[i,:] = [float(x.strip()) for x in line.strip().split(' ')]
-    if i >= len(items):
+    if i > len(items):
         print "more lines than items"
         break
     i += 1
@@ -74,37 +82,49 @@ fU.close()
 fV.close()
 print "done reading in theta and beta"
 
-
-np.random.seed(42)
-print len(users)
+#print len(users), len(items)
 #print sorted(users, key=lambda x: users[x])[:10]
 #users_set = set(sorted(users, key=lambda x: np.random.rand())[:1000])
 #items_set = set(sorted(items, key=lambda x: -data.item_counts[model.items[x]])[:10000])
 #users = set([users[user] for user in users_set])
 #items = set([items[item] for item in items_set])
 #print "subsetted item an users done."
+np.random.seed(42)
+user_set = users
+item_set = set()
+if len(users) > 10000:
+    user_set = set(sorted(sorted(users.keys()), key=lambda x: np.random.rand())[:10000])
 
 # read in relevant test data
 test_ratings = [] #dict_matrix(int, len(users_set), len(items_set))
 user_data = defaultdict(dict)
+final_users = set()
 for line in open(join(data_stem, "test.tsv"), 'r'):
     user, item, rating = \
         tuple([int(x.strip()) for x in line.split('\t')])
-    if user not in users or item not in items:
+    if user not in user_set or item not in items:
         continue
-    #if (users_set and user not in users_set) or (items_set and item not in items_set):
-    #    continue
     if rating != 0:
-        test_ratings.append((users[user], items[item], rating))
-        user_data[users[user]][items[item]] = rating
+        test_ratings.append((user, item, rating))
+        user_data[user][item] = rating
+        final_users.add(user)
+        item_set.add(item)
+user_set = final_users
+
+print "subsetted users (%d) and items (%d)." % (len(user_set), len(item_set))
+print len(user_data), "users to evaluate"
 
 print "evaluating predictions for each user-item pair"
 
 print "creating rankings for each user..."
 f = open(join(fit_stem, "rankings.out"), 'w+')
 for user in users:
-    if users[user] not in user_data: # ignore users with no heldout
+    #print user
+    if user not in user_data: # ignore users with no heldout
+        #print "user has no heldout"
         continue
+    #else:
+    #    print "good to go!"
     #print user
     preds = {}
     for item in items:
@@ -112,11 +132,11 @@ for user in users:
 
     rank = 1
     for item in sorted(preds, key=lambda i:-preds[i]):
-        if items[item] in user_data_train[users[user]]:
+        if item in user_data_train[user]:
             continue
         pred = preds[item]
-        rating = user_data[users[user]][items[item]] if items[item] in \
-            user_data[users[user]] else 0
+        rating = user_data[user][item] if item in \
+            user_data[user] else 0
         f.write("%d, %d, %d, %f, %d\n" % \
             (user, item, rating, pred, rank))
         rank += 1

@@ -39,7 +39,7 @@ for line in input_file:
     user, item, rating, pred, rank = line.split(',')
     user = int(user.strip())
     if user not in users:
-        print user
+        #print user
         if USER != -1:
             # log old user
             rmse += user_rmse

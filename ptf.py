@@ -291,6 +291,8 @@ class parameters:
             phi_sum += phi_M.sum()
         if model.trust and MF_converged:
             phi_sum += phi_T.sum()
+        if phi_sum == 0:
+            return
         mult = rating / phi_sum
         logmult = log(mult)
         log_user_scale = log(user_scale)

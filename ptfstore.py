@@ -25,7 +25,7 @@ def dump_model(fname, data, model):
 
     f.close()
 
-def dump(fname, model, params):
+def dump(fname, model, params, data):
     f = open(fname, 'w+')
 
     # intercepts
@@ -44,11 +44,14 @@ def dump(fname, model, params):
                 tau += ' %d:%d:%.5e' % (row,col,params.tau.rows[row][col])
         f.write("%s\n" % tau.strip())
 
+    reverse = {}
+    for user in data.users:
+        reverse[data.users[user]] = user
     # theta
     if model.MF:
         row_id = 0
         for row in params.theta:
-            r = 'U%d' % row_id
+            r = 'U%d(%d)' % (row_id, reverse[row_id])
             for val in row:
                 r += " %.5e" % val
             f.write("%s\n" % r)

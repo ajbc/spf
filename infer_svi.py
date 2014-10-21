@@ -23,7 +23,7 @@ kappa = 0.7
 user_sample_count = 500
 user_scale = 1
 
-def save_state(dire, iteration, model, params):
+def save_state(dire, iteration, model, params, data):
     # find old state file
     oldstate = ''
     # TODO: make this work for local dump (i.e. dire == '')
@@ -34,7 +34,7 @@ def save_state(dire, iteration, model, params):
 
     #print "Saving state!"
     fname = "%s-iter%d.dat" % (dire + '/params', iteration)
-    ptfstore.dump(fname, model, params)
+    ptfstore.dump(fname, model, params, data)
 
     # get rid of old state after
     if oldstate != '':
@@ -46,6 +46,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
     if not rnd:
         rnd = random.Random()
     old_C = 1.0
+    nh = 0
     delta_C = 1e12
     delta_C_thresh = 1e-5 #TODO: find good default value and make it a command arg
     if data.binary:
@@ -66,8 +67,10 @@ def infer(model, priors, params, data, dire='', rnd=False):
     batch_size = min(100000, len(data.train_triplets)) #0.1M
 
     MF_converged = True #not model.MF
-    while (not model.SVI and delta_C > delta_C_thresh) or \
-        (model.SVI and sum(delta_C)/10 > delta_C_thresh): # not converged
+    #while (not model.SVI and delta_C > delta_C_thresh) or \
+    #    (model.SVI and sum(delta_C)/10 > delta_C_thresh): # not converged
+    #while iteration < 60:
+    while True:
         if (delta_C[0] if model.SVI else delta_C) < \
             10**(log(delta_C_thresh)/log(10)/2) and not MF_converged:
             MF_converged = True
@@ -110,6 +113,15 @@ def infer(model, priors, params, data, dire='', rnd=False):
                 user_scale) # only update trust shapes after MF converged
 
         start = clock()
+
+        #print "\ntheta\t0\t\t1\t\t2"
+        #for n in range(len(data.users)):
+        #    print "%d\t%f\t%f\t%f" % (n, params.theta[n,0], params.theta[n,1], params.theta[n,2])
+
+        #print "\nbeta\t0\t\t1\t\t2"
+        #for n in range(len(data.items)):
+        #    print "%d\t%f\t%f\t%f" % (n, params.beta[n,0], params.beta[n,1], params.beta[n,2])
+
         params.update_MF(model, data, user_scale, \
             users_updated, \
             items_updated, items_seen_counts, tau0, kappa)
@@ -135,33 +147,62 @@ def infer(model, priors, params, data, dire='', rnd=False):
             else:
                 params.inter[itms] = params.a_inter[itms] / params.b_inter[itms]
 
-        C = get_elbo(model, priors, params, data) #TODO: rename; it's not the elbo!
-        if model.SVI:
-            delta_C.pop(0)
-            delta_C.append(abs((old_C - C) / old_C))
-        else:
-            delta_C = abs((old_C - C) / old_C)
-        old_C = C
 
         # save state regularly
         if iteration % 10 == 0: # 50 == 0:
+            C = get_elbo(model, priors, params, data) #TODO: rename; it's not the elbo!
+            if model.SVI:
+                delta_C.pop(0)
+                delta_C.append(abs((old_C - C) / old_C))
+            else:
+                delta_C = abs((old_C - C) / old_C)
+
             if iteration != 0:
-                save_state(dire, iteration, model, params)
+                save_state(dire, iteration, model, params, data)
             tau_ave = 0 if type(params.tau)==type(params.inter) else params.tau.get_ave()
             if model.SVI:
                 print iteration, C, delta_C[-1], (sum(delta_C)/10)
             else:
                 print iteration, C, delta_C
-        logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
-            (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
-            tau_ave, \
-            params.inter.sum()/data.item_count))
 
-        params.set_to_priors(priors)
+            print iteration, C, old_C
+            logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
+                (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
+                tau_ave, \
+                params.inter.sum()/data.item_count))
+
+
+        # check for convergence
+        stop = False
+        if iteration > 30 and iteration % 10 == 0:
+            if C > old_C and delta_C < 0.000001:
+                stop = True
+                print "likelihood change small"
+            elif C < old_C:
+                nh += 1
+            elif C > old_C:
+                nh = 0
+
+            if nh > 2:
+                stop = True
+                print "likelihood going down"
 
         iteration += 1
 
-    save_state(dire, iteration, model, params)
+        if stop:# or iteration > 61:
+            if stop:
+                print "breaking forever loop"
+            else:
+                print "BAD", nh
+            break
+        old_C = C
+
+
+
+        params.set_to_priors(priors)
+
+
+    save_state(dire, iteration, model, params, data)
     logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
         (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
         tau_ave, \
@@ -216,34 +257,53 @@ def init_params(model, priors, data, spread=0.1):
     r = rng.rng()
     r.set(11)
     # mimic's prem's initialization
-    ad = np.ones((data.user_count, model.K)) * 0.3
-    for i in range(data.user_count):
-        for k in range(model.K):
-            a = 0.01 * r.uniform()
-            ad[i,k] += a
-    params.a_theta = ad
-    bd = np.ones(model.K) * 0.3
-    for k in range(model.K):
-        b = 0.1 * r.uniform()
-        bd[k] += b
-    params.b_theta = bd
     cd = np.ones((data.item_count, model.K)) * 0.3
     for i in range(data.item_count):
         for k in range(model.K):
             c = 0.01 * r.uniform()
             cd[i,k] += c
+            print "shape user/item %d, component %d: %f" % (i, k, cd[i,k])
     params.a_beta = cd
+
     dd = np.ones(model.K) * 0.3
     for k in range(model.K):
         d = 0.1 * r.uniform()
         dd[k] += d
+        print "rate component %d: %f" % (k, dd[k])
     params.b_beta = dd
+
+    ad = np.ones((data.user_count, model.K)) * 0.3 #TODO: This constant should be in priors variable
+    for i in range(data.user_count):
+        for k in range(model.K):
+            a = 0.01 * r.uniform()
+            ad[i,k] += a
+            print "shape user/item %d, component %d: %f" % (i, k, ad[i,k])
+    params.a_theta = ad
+
+    bd = np.ones(model.K) * 0.3
+    for k in range(model.K):
+        b = 0.1 * r.uniform()
+        bd[k] += b
+        print "rate component %d: %f" % (k, bd[k])
+    params.b_theta = bd
+
 
     b = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only
     d = np.zeros(model.K) # why this and bd?? #TODO: rm bd above; it's only
     #there to mathc prem's code for random number generations, but it isn't
     #actually used
 
+
+    #set_gamma_exp_init(_ccurr, _Ebeta, _Elogbeta, _d);
+    params.logbeta = np.zeros((data.item_count, model.K))
+    for i in range(data.item_count):
+        for j in range(model.K):
+            d[j] = 0.3 + 0.1 * r.uniform()
+            params.beta[i,j] = cd[i,j] / d[j]
+            params.logbeta[i,j] = pygsl.sf.psi(cd[i,j])[0] - np.log(d[j])
+            #if i ==0 and j < 3:
+            #    print "[%2d,%2d]  (%5f %5f)  %5f (lg)%5f" % (i, j, cd[i,j], d[j], \
+            #        params.beta[i,j], params.logbeta[i,j])
     #set_gamma_exp_init(_acurr, _Etheta, _Elogtheta, _b);
     params.logtheta = np.zeros((data.user_count, model.K))
     for i in range(data.user_count):
@@ -257,17 +317,6 @@ def init_params(model, priors, data, spread=0.1):
             #if i == 0 and j < 3:
             #    print "[%2d,%2d]  (%5f %5f)  %5f (lg)%5f" % (i, j, ad[i,j], b[j], \
             #        params.theta[i,j], params.logtheta[i,j])
-
-    #set_gamma_exp_init(_ccurr, _Ebeta, _Elogbeta, _d);
-    params.logbeta = np.zeros((data.item_count, model.K))
-    for i in range(data.item_count):
-        for j in range(model.K):
-            d[j] = 0.3 + 0.1 * r.uniform()
-            params.beta[i,j] = cd[i,j] / d[j]
-            params.logbeta[i,j] = pygsl.sf.psi(cd[i,j])[0] - np.log(d[j])
-            #if i ==0 and j < 3:
-            #    print "[%2d,%2d]  (%5f %5f)  %5f (lg)%5f" % (i, j, cd[i,j], d[j], \
-            #        params.beta[i,j], params.logbeta[i,j])
     #set_etheta_sum();
     #set_ebeta_sum();
     #set_to_prior_users(_anext, _bnext);
