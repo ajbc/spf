@@ -956,12 +956,18 @@ class dataset:
             user, item, rating = \
                  tuple([int(x.strip()) for x in line.split('\t')])
 
+            if user == 838:
+                print "HOOOOLLLA"
             if user not in self.users or item not in self.items:
                 continue
+            if user == 838:
+                print "PASSED"
 
             self.rating_count[2] += 1
 
-            if item not in self.user_data[user]:
+            if self.items[item] not in self.user_data[self.users[user]] and self.items[item] not in self.user_datav[self.users[user]]:
+                if user == 838:
+                    print "MADE IT", user, item, rating
                 if self.binary:
                     self.test_user_data[user].add(item)
                 else:

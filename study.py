@@ -20,7 +20,13 @@ def get_eval_sets(data):
     lr.seed(42)
 
     # return unmapped (original) sets of users & items
-    return data.users.keys(), data.items.keys()
+    users = data.test_user_data.keys()
+    items = set()
+    for user in users:
+        for item in data.test_user_data[user]:
+            items.add(item)
+    #return data.users.keys(), data.items.keys()
+    return users, items
 
 
 ### Model study classes ###
@@ -82,7 +88,7 @@ class BaselineStudy(multiprocessing.Process):
         fout_rank.write("user, item, rating, prediction, rank\n")
 
         #for user in users:
-        for user in self.data.test_user_data:
+        for user in users:
             if user == 838:
                 print 'HEREREREE!'
             num_heldout = self.data.heldout_count(user)
