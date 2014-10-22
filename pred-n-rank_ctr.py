@@ -90,26 +90,33 @@ print "done reading in theta and beta"
 #items = set([items[item] for item in items_set])
 #print "subsetted item an users done."
 np.random.seed(42)
-user_set = users
+user_set = set()
 item_set = set()
-if len(users) > 10000:
-    user_set = set(sorted(sorted(users.keys()), key=lambda x: np.random.rand())[:10000])
 
 # read in relevant test data
-test_ratings = [] #dict_matrix(int, len(users_set), len(items_set))
 user_data = defaultdict(dict)
 final_users = set()
 for line in open(join(data_stem, "test.tsv"), 'r'):
     user, item, rating = \
         tuple([int(x.strip()) for x in line.split('\t')])
-    if user not in user_set or item not in items:
+    if user not in users or item not in items:
         continue
     if rating != 0:
-        test_ratings.append((user, item, rating))
         user_data[user][item] = rating
-        final_users.add(user)
+        user_set.add(user)
         item_set.add(item)
-user_set = final_users
+
+if len(user_set)*len(item_set) > 1000*20000:
+    final_users = set()
+    final_items = set()
+    randomly_sorted_users = sorted(sorted(user_set), key=lambda x: np.random.rand())
+    while len(final_users) * len(final_items) < 1000*20000:
+        user = randomly_sorted_users.pop()
+        final_users.add(user)
+        for item in user_data[user]:
+            final_items.add(item)
+    user_set = final_users
+    item_set = final_items
 
 print "subsetted users (%d) and items (%d)." % (len(user_set), len(item_set))
 print len(user_data), "users to evaluate"
@@ -118,22 +125,15 @@ print "evaluating predictions for each user-item pair"
 
 print "creating rankings for each user..."
 f = open(join(fit_stem, "rankings.out"), 'w+')
-for user in users:
-    #print user
-    if user not in user_data: # ignore users with no heldout
-        #print "user has no heldout"
-        continue
-    #else:
-    #    print "good to go!"
-    #print user
+for user in user_set:
     preds = {}
-    for item in items:
+    for item in item_set:
+        if item in user_data_train[user]:
+            continue
         preds[item] = sum(theta[users[user]] * beta[items[item]])
 
     rank = 1
     for item in sorted(preds, key=lambda i:-preds[i]):
-        if item in user_data_train[user]:
-            continue
         pred = preds[item]
         rating = user_data[user][item] if item in \
             user_data[user] else 0

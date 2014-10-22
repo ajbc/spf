@@ -97,6 +97,8 @@ print len(users)
 
 # read in relevant test data
 user_data = defaultdict(dict)
+user_set = set()
+item_set = set()
 for line in open(join(data_stem, "test.tsv"), 'r'):
     user, item, rating = \
         tuple([int(x.strip()) for x in line.split('\t')])
@@ -106,23 +108,34 @@ for line in open(join(data_stem, "test.tsv"), 'r'):
     #    continue
     if rating != 0:
         user_data[user][item] = rating
+        user_set.add(user)
+        item_set.add(item)
+
+if len(user_set)*len(item_set) > 1000*20000:
+    final_users = set()
+    final_items = set()
+    randomly_sorted_users = sorted(sorted(user_set), key=lambda x: np.random.rand())
+    while len(final_users) * len(final_items) < 1000*20000:
+        user = randomly_sorted_users.pop()
+        final_users.add(user)
+        for item in user_data[user]:
+            final_items.add(item)
+    user_set = final_users
+    item_set = final_items
 
 print "evaluating predictions for each user-item pair"
 
 print "creating rankings for each user..."
 f = open(join(fit_stem, "rankings.out"), 'w+')
-for user in users:
-    if user not in user_data: # ignore users with no heldout
-        continue
-    #print user
+for user in user_set:
     preds = {}
-    for item in items:
+    for item in item_set:
+        if item in user_data_train[user]:
+            continue
         preds[item] = sum(theta[users[user]] * beta[items[item]])
 
     rank = 1
     for item in sorted(preds, key=lambda i:-preds[i]):
-        if item in user_data_train[user]:
-            continue
         pred = preds[item]
         rating = user_data[user][item] if item in \
             user_data[user] else 0

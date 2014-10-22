@@ -25,7 +25,19 @@ def get_eval_sets(data):
     for user in users:
         for item in data.test_user_data[user]:
             items.add(item)
-    #return data.users.keys(), data.items.keys()
+
+    if len(users)*len(items) > 1000*20000:
+        final_users = set()
+        final_items = set()
+        randomly_sorted_users = sorted(sorted(users), key=lambda x: np.random.rand())
+        while len(final_users) * len(final_items) < 1000*20000:
+            user = randomly_sorted_users.pop()
+            final_users.add(user)
+            for item in user_dat[user]:
+                final_items.add(item)
+        user_set = final_users
+        item_set = final_items
+
     return users, items
 
 
