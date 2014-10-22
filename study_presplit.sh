@@ -1,14 +1,14 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]; then
-    echo "usage: ./study [data-dir] [output-dir]"
+if [ "$#" -ne 3 ]; then
+    echo "usage: ./study [data-dir] [output-dir] [K]"
     exit
 fi
 
 
 datadir=$1
 outdir=$2
-K=20
+K=$3
 
 if [ ! -d $2 ]; then
     mkdir $2
