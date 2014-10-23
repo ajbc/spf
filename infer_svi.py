@@ -64,7 +64,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
     global user_scale
 
     items_seen_counts = defaultdict(int)
-    batch_size = min(100000, len(data.train_triplets)) #0.1M
+    batch_size = min(1000, len(data.train_triplets))
 
     MF_converged = True #not model.MF
     #while (not model.SVI and delta_C > delta_C_thresh) or \
@@ -298,7 +298,7 @@ def init_params(model, priors, data, spread=0.1):
     params.logbeta = np.zeros((data.item_count, model.K))
     for i in range(data.item_count):
         for j in range(model.K):
-            d[j] = 0.3 + 0.1 * r.uniform()
+            d[j] = (0.3 + 0.1 * r.uniform())#*model.K # *k is my own addition
             params.beta[i,j] = cd[i,j] / d[j]
             params.logbeta[i,j] = pygsl.sf.psi(cd[i,j])[0] - np.log(d[j])
             #if i ==0 and j < 3:
@@ -308,7 +308,7 @@ def init_params(model, priors, data, spread=0.1):
     params.logtheta = np.zeros((data.user_count, model.K))
     for i in range(data.user_count):
         for j in range(model.K):
-            b[j] = 0.3 + 0.1 * r.uniform()
+            b[j] = (0.3 + 0.1 * r.uniform()) #* 2 just playing around
             params.theta[i,j] = ad[i,j] / b[j]
             #print params.logtheta[i,j]
             #print pygsl.sf.psi(ad[i,j])

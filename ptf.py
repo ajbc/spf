@@ -190,7 +190,7 @@ class model_settings:
         self.intercept = intercept
         self.sorec = sorec
         self.nofdiv = False
-        self.nofdiv = True #new!
+        #self.nofdiv = True #new!
         self.SVI = SVI
 
     #@classmethod
