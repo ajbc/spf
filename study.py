@@ -29,7 +29,7 @@ def get_eval_sets(data):
     if len(users)*len(items) > 1000*20000:
         final_users = set()
         final_items = set()
-        randomly_sorted_users = sorted(sorted(users), key=lambda x: np.random.rand())
+        randomly_sorted_users = sorted(sorted(users), key=lambda x: lr.rand())
         while len(final_users) * len(final_items) < 1000*20000:
             user = randomly_sorted_users.pop()
             final_users.add(user)
@@ -226,7 +226,7 @@ class PFStudy(BaselineStudy):
         model = model_settings(self.K, MF=True, trust=False, intercept=False, \
             SVI=self.SVI)
         priors = set_priors(model, self.data)
-        params = init_params(model, priors, self.data)
+        params = init_params(model, priors, self.data, self.lr)
         infer(model, priors, params, data, self.out_dir, self.lr)
         self.params = params
 
@@ -234,7 +234,7 @@ class PFStudy(BaselineStudy):
         return self.params.inter[self.data.items[item]]
 
     def pred(self, user, item, details=False):
-        prediction = self.params.inter[self.data.items[item]]
+        prediction = 0.0#self.params.inter[self.data.items[item]]
         prediction += sum(self.params.theta[self.data.users[user]] * \
             self.params.beta[self.data.items[item]])
         if details:
@@ -274,9 +274,9 @@ class SPFStudy(BaselineStudy):
     def fit(self):
         #model = model_settings(self.K, MF=True, trust=True, intercept=True, \ INTERTAG
         model = model_settings(self.K, MF=True, trust=True, intercept=False, \
-            SVI=self.SVI)
+            SVI=self.SVI)#, eta=True)
         priors = set_priors(model, self.data)
-        params = init_params(model, priors, self.data)
+        params = init_params(model, priors, self.data, self.lr)
         infer(model, priors, params, data, self.out_dir, self.lr)
         self.params = params
         self.model = model
@@ -285,10 +285,15 @@ class SPFStudy(BaselineStudy):
     def intercept(self, item):
         return self.params.inter[self.data.items[item]]
     def pred(self, user, item, details=False):
-        prediction = self.params.inter[self.data.items[item]]
-        prediction += sum(self.params.theta[self.data.users[user]] * \
-            self.params.beta[self.data.items[item]])
-        if details:
+        #prediction = self.params.inter[self.data.items[item]]
+        prediction = 0.0
+        if self.model.eta:
+            prediction += sum(self.params.theta[self.data.users[user]] * \
+                self.params.beta[self.data.items[item]]) * self.params.eta
+        else:
+            prediction += sum(self.params.theta[self.data.users[user]] * \
+                self.params.beta[self.data.items[item]])
+        '''if details:
             print '\tintercept', self.params.inter[self.data.items[item]]
             mu = ave(self.params.theta[self.data.users[user]])
             k = 0
@@ -302,7 +307,7 @@ class SPFStudy(BaselineStudy):
             for v in self.params.beta[self.data.items[item]]:
                 if v > mu:
                     print '\tbeta',k,v
-                k += 1
+                k += 1'''
 
         T = 0.0
         for vser in data.friends[data.users[user]]:
@@ -316,7 +321,10 @@ class SPFStudy(BaselineStudy):
         if not self.model.nofdiv and self.data.friend_counts[self.data.users[user]][self.data.items[item]] != 0:
             T /= self.data.friend_counts[self.data.users[user]][self.data.items[item]]
 
-        prediction += T
+        if self.model.eta:
+            prediction += T * (1-self.params.eta)
+        else:
+            prediction += T
 
         return prediction
 
@@ -363,7 +371,7 @@ class TrustStudy(BaselineStudy):
         model = model_settings(self.K, MF=False, trust=True, intercept=False, \
             SVI=self.SVI)
         priors = set_priors(model, self.data)
-        params = init_params(model, priors, self.data)
+        params = init_params(model, priors, self.data, self.lr)
         infer(model, priors, params, data, self.out_dir, self.lr)
         self.params = params
         self.model = model
@@ -373,7 +381,7 @@ class TrustStudy(BaselineStudy):
         return self.params.inter[self.data.items[item]]
 
     def pred(self, user, item, details=False):
-        prediction = self.params.inter[self.data.items[item]]
+        prediction = 0.0#self.params.inter[self.data.items[item]]
 
         T = 0.0
         for vser in data.friends[data.users[user]]:

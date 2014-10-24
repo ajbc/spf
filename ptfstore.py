@@ -29,6 +29,8 @@ def dump(fname, model, params, data):
     f = open(fname, 'w+')
 
     # intercepts
+    if model.eta:
+        f.write("eta: %f\n" % params.eta)
     if model.intercept:
         intercepts = ''
         for i in params.inter:

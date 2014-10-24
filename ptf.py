@@ -30,7 +30,10 @@ def get_predictions(model, params, data, test_set):
         M = (params.theta[test_set.users] * params.beta[test_set.items]).sum(axis=1)
 
     if model.MF:
-        preds += M
+        if model.eta:
+            preds += M * params.eta
+        else:
+            preds += M
 
     if model.trust:
         T = np.zeros(len(test_set.users))
@@ -50,11 +53,15 @@ def get_predictions(model, params, data, test_set):
                 T[i] /= data.friend_counts[user][item] #NOFDIV
 
     if model.trust:
-        preds += T
+        if model.eta:
+            preds += T * (1-params.eta)
+        else:
+            preds += T
 
     return preds
 
 def approx_log_likelihood(model, params, data, priors):
+    return
     # mirroring prem's code...
     sf = 0
     for user, item, rating in data.train_triplets:
@@ -183,15 +190,16 @@ def get_ave_likelihood(model, params, data, test_set):
         / test_set.size
 
 class model_settings:
-    def __init__(self, K, MF, trust, intercept, sorec=False, SVI=False):
+    def __init__(self, K, MF, trust, intercept, sorec=False, SVI=False, eta=False):
         self.K = K
         self.MF = MF
         self.trust = trust
         self.intercept = intercept
         self.sorec = sorec
-        self.nofdiv = False
-        #self.nofdiv = True #new!
+        #self.nofdiv = False
+        self.nofdiv = True #new!
         self.SVI = SVI
+        self.eta = eta
 
     #@classmethod
     #def new(self, user_count, item_count, K, MF, trust, iat, intercept, users, items, undirected):
@@ -221,8 +229,13 @@ class parameters:
         self.logtheta = np.zeros((data.user_count, model.K))
         self.beta = np.zeros((data.item_count, model.K))
         self.logbeta = np.zeros((data.item_count, model.K))
+        self.eta = 2.0 / 7.0
+        self.logeta = digamma(2.0) - digamma(2.0 + 7.0)
+        self.logetai = digamma(7.0) - digamma(2.0 + 7.0)
 
         if not readonly:
+            self.a_eta = 2.0
+            self.b_eta = 5.0
             print "    initializing intermediate variables"
             self.a_theta = np.ones((data.user_count, model.K))
             self.a_beta = np.ones((data.item_count, model.K))
@@ -259,11 +272,20 @@ class parameters:
         self.a_tau = priors['a_tau'].copy()
         self.b_tau = priors['b_tau'].copy()
         self.a_inter.fill(priors['a_inter'])
+        self.a_eta = 2.0
+        self.b_eta = 5.0
 
+
+    def update_eta(self):
+        self.eta = self.a_eta / (self.a_eta + self.b_eta)
+        self.logeta = digamma(self.a_eta) - digamma(self.a_eta + self.b_eta)
+        self.logetai = digamma(self.b_eta) - digamma(self.a_eta + self.b_eta)
 
     def update_shape(self, user, item, rating, model, data, MF_converged=True, \
         user_scale=1.0):
         log_phi_M = self.logtheta[user] + self.logbeta[item]
+        if model.eta:
+            log_phi_M += self.logeta
         phi_M = exp(log_phi_M)
 
         start = clock()
@@ -273,11 +295,15 @@ class parameters:
                 for friend in self.logtau.rows[user]:
                     log_phi_T.cols[friend] = self.logtau.rows[user][friend] + \
                     data.log_sparse_ratings.rows[item][friend]
+                    if model.eta:
+                        log_phi_T.cols[friend] += self.logetai
                     #NOFDIV
             else:
                 for friend in self.logtau.rows[user]:
                     if item in data.user_data[friend]:
                         log_phi_T.cols[friend] = self.logtau.rows[user][friend]
+                        if model.eta:
+                            log_phi_T.cols[friend] += self.logetai
         div = 0 if model.nofdiv or data.friend_counts[user][item] == 0 else \
             max(0, log(data.friend_counts[user][item]))
         if div != 0:
@@ -306,12 +332,14 @@ class parameters:
                 self.a_beta[item] += exp(log_phi_M + logmult + log_user_scale)
             else:
                 self.a_beta[item] += exp(log_phi_M + logmult)
+
+            self.a_eta += sum(exp(log_phi_M + logmult))
             #self.a_beta[item] += exp(log_phi_M + logmult + log_user_scale)
         if model.trust and MF_converged:
             if phi_T.sum() != 0:
                 log_phi_T.add_const(logmult)
                 self.a_tau.row_add(user, log_phi_T.exp())
-
+                self.b_eta += log_phi_T.exp().sum()
 
     def update_MF(self, model, data, user_scale=1.0, \
                 users_updated=False, \
@@ -326,14 +354,20 @@ class parameters:
             items_updated = set(data.items.values())
 
         usrs = list(users_updated)
-        self.b_theta += self.beta.sum(axis=0)
+        if model.eta:
+            self.b_theta += self.beta.sum(axis=0) * self.eta
+        else:
+            self.b_theta += self.beta.sum(axis=0)
 
         for user in users_updated:
             self.theta[user] = self.a_theta[user] / self.b_theta
             self.logtheta[user] = psi(self.a_theta[user]) - \
                 log(self.b_theta)
 
-        self.b_beta += self.theta.sum(axis=0)
+        if model.eta:
+            self.b_beta += self.theta.sum(axis=0) * self.eta
+        else:
+            self.b_beta += self.theta.sum(axis=0)
 
         for item in items_updated:
             if model.SVI:
@@ -349,13 +383,17 @@ class parameters:
             users_updated = set(data.users.values())
 
         if model.trust:
-            self.tau = self.a_tau / self.b_tau
+            if model.eta:
+                b_tau = self.b_tau.multadd(1- self.eta, 0.3)
+            else:
+                b_tau = self.b_tau
+            self.tau = self.a_tau / b_tau
 
             #print "a tau 35"
             #print self.a_tau.rows[data.users[35]]
             #print "b tau 35"
             #print self.b_tau.rows[data.users[35]]
-            self.logtau = self.a_tau.psi() - log(self.b_tau)
+            self.logtau = self.a_tau.psi() - log(b_tau)
 
 
 class triplets:
@@ -609,6 +647,14 @@ class dict_matrix():
         for row in self.rows:
             for col in self.rows[row]:
                 rv.set(row, col, self.rows[row][col] * const)
+        return rv
+
+    def multadd(self, constA, constB):
+        rv = dict_matrix(self.val_type)#, self.nrows, self.ncols)
+        print 'CONST A AND B', constA, constB
+        for row in self.rows:
+            for col in self.rows[row]:
+                rv.set(row, col, self.rows[row][col] * constA + constB)
         return rv
 
     def double_multiply(self, in_row, in_col):

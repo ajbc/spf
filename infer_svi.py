@@ -57,7 +57,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
         delta_C_thresh /= 100
 
     logf = open(join(dire, 'log.tsv'), 'w+')
-    logf.write("iteration\tC\ttheta\tbeta\ttau\tintercept\n") # ave values
+    logf.write("iteration\tC\ttheta\tbeta\ttau\tintercept\teta\n") # ave values
 
     iteration = 0
 
@@ -88,7 +88,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
         #print len(users_updated)
         training_batch = [datum for datum in data.train_triplets\
             if datum[0] in users_updated_orig]
-        random.shuffle(training_batch)
+        rnd.shuffle(training_batch)
 
         if len(training_batch) == 0:
             continue
@@ -126,6 +126,9 @@ def infer(model, priors, params, data, dire='', rnd=False):
             users_updated, \
             items_updated, items_seen_counts, tau0, kappa)
 
+        if model.eta and iteration > 30:
+            params.update_eta()
+
         # only need to update tau from default (sum of ratings)
         # when we have an interaction term
         if MF_converged:
@@ -149,7 +152,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
 
 
         # save state regularly
-        if iteration % 10 == 0: # 50 == 0:
+        if iteration % 5 == 0: # 50 == 0:
             C = get_elbo(model, priors, params, data) #TODO: rename; it's not the elbo!
             if model.SVI:
                 delta_C.pop(0)
@@ -166,15 +169,15 @@ def infer(model, priors, params, data, dire='', rnd=False):
                 print iteration, C, delta_C
 
             print iteration, C, old_C
-            logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
+            logf.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
                 (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
                 tau_ave, \
-                params.inter.sum()/data.item_count))
+                params.inter.sum()/data.item_count, params.eta))
 
 
         # check for convergence
         stop = False
-        if iteration > 30 and iteration % 10 == 0:
+        if iteration > 30 and iteration % 5 == 0:
             if C > old_C and delta_C < 0.000001:
                 stop = True
                 print "likelihood change small"
@@ -203,10 +206,10 @@ def infer(model, priors, params, data, dire='', rnd=False):
 
 
     save_state(dire, iteration, model, params, data)
-    logf.write("%d\t%f\t%f\t%f\t%f\t%f\n" % \
+    logf.write("%d\t%f\t%f\t%f\t%f\t%f\t%f\n" % \
         (iteration, C, params.theta.sum()/(model.K*data.user_count), params.beta.sum()/(model.K*data.item_count), \
         tau_ave, \
-        params.inter.sum()/data.item_count))
+        params.inter.sum()/data.item_count, params.eta))
 
     if model.trust:
         tauf = open(join(dire, 'tau_log.tsv'), 'w+')
@@ -242,7 +245,7 @@ def load_model(fit_dir, iteration, model, priors, data):
     params.set_to_priors(priors)
     return params
 
-def init_params(model, priors, data, spread=0.1):
+def init_params(model, priors, data, rnd, spread=0.1):
     params = parameters(model, readonly=False, data=data, priors=priors)
     params.set_to_priors(priors)
 
@@ -254,20 +257,22 @@ def init_params(model, priors, data, spread=0.1):
     print "pygsl numbers"
     import pygsl.rng as rng
     #rng.rng.set(11)
-    r = rng.rng()
-    r.set(11)
+    #r = rng.rng()
+    #r.set(11)
     # mimic's prem's initialization
     cd = np.ones((data.item_count, model.K)) * 0.3
     for i in range(data.item_count):
         for k in range(model.K):
-            c = 0.01 * r.uniform()
+            #c = 0.01 * r.uniform()
+            c = 0.01 * rnd.uniform()
             cd[i,k] += c
             print "shape user/item %d, component %d: %f" % (i, k, cd[i,k])
     params.a_beta = cd
 
     dd = np.ones(model.K) * 0.3
     for k in range(model.K):
-        d = 0.1 * r.uniform()
+        #d = 0.1 * r.uniform()
+        d = 0.1 * rnd.uniform()
         dd[k] += d
         print "rate component %d: %f" % (k, dd[k])
     params.b_beta = dd
@@ -275,14 +280,16 @@ def init_params(model, priors, data, spread=0.1):
     ad = np.ones((data.user_count, model.K)) * 0.3 #TODO: This constant should be in priors variable
     for i in range(data.user_count):
         for k in range(model.K):
-            a = 0.01 * r.uniform()
+            #a = 0.01 * r.uniform()
+            a = 0.01 * rnd.uniform()
             ad[i,k] += a
             print "shape user/item %d, component %d: %f" % (i, k, ad[i,k])
     params.a_theta = ad
 
     bd = np.ones(model.K) * 0.3
     for k in range(model.K):
-        b = 0.1 * r.uniform()
+        #b = 0.1 * r.uniform()
+        b = 0.1 * rnd.uniform()
         bd[k] += b
         print "rate component %d: %f" % (k, bd[k])
     params.b_theta = bd
@@ -298,7 +305,8 @@ def init_params(model, priors, data, spread=0.1):
     params.logbeta = np.zeros((data.item_count, model.K))
     for i in range(data.item_count):
         for j in range(model.K):
-            d[j] = (0.3 + 0.1 * r.uniform())#*model.K # *k is my own addition
+            #d[j] = (0.3 + 0.1 * r.uniform())#*model.K # *k is my own addition
+            d[j] = (0.3 + 0.1 * rnd.uniform())#*model.K # *k is my own addition
             params.beta[i,j] = cd[i,j] / d[j]
             params.logbeta[i,j] = pygsl.sf.psi(cd[i,j])[0] - np.log(d[j])
             #if i ==0 and j < 3:
@@ -308,7 +316,8 @@ def init_params(model, priors, data, spread=0.1):
     params.logtheta = np.zeros((data.user_count, model.K))
     for i in range(data.user_count):
         for j in range(model.K):
-            b[j] = (0.3 + 0.1 * r.uniform()) #* 2 just playing around
+            #b[j] = (0.3 + 0.1 * r.uniform()) #* 2 just playing around
+            b[j] = (0.3 + 0.1 * rnd.uniform()) #* 2 just playing around
             params.theta[i,j] = ad[i,j] / b[j]
             #print params.logtheta[i,j]
             #print pygsl.sf.psi(ad[i,j])
@@ -357,7 +366,11 @@ def set_priors(model, data, \
 
     # this keeps tau small by default
     priors['a_tau'] = data.friend_matrix.const_multiply(a_tau)
-    priors['b_tau'] = data.friend_matrix.const_multiply(b_tau*1e-3)#data.item_count)#b_tau * 1e-3)
+    if model.eta:
+        priors['b_tau'] = data.friend_matrix.const_multiply(1e-12)
+    else:
+        priors['b_tau'] = data.friend_matrix.const_multiply(b_tau)
+    #priors['b_tau'] = data.friend_matrix.const_multiply(b_tau*1e-3)#data.item_count)#b_tau * 1e-3)
 
     #TODO: parse these from args?
     priors['a_inter'] = 1e-30
