@@ -264,7 +264,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
     for i in range(data.item_count):
         for k in range(model.K):
             #c = 0.01 * r.uniform()
-            c = 0.01 * rnd.uniform()
+            c = rnd.uniform(0,0.01)
             cd[i,k] += c
             print "shape user/item %d, component %d: %f" % (i, k, cd[i,k])
     params.a_beta = cd
@@ -272,7 +272,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
     dd = np.ones(model.K) * 0.3
     for k in range(model.K):
         #d = 0.1 * r.uniform()
-        d = 0.1 * rnd.uniform()
+        d = rnd.uniform(0,0.1)
         dd[k] += d
         print "rate component %d: %f" % (k, dd[k])
     params.b_beta = dd
@@ -281,7 +281,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
     for i in range(data.user_count):
         for k in range(model.K):
             #a = 0.01 * r.uniform()
-            a = 0.01 * rnd.uniform()
+            a = rnd.uniform(0,0.01)
             ad[i,k] += a
             print "shape user/item %d, component %d: %f" % (i, k, ad[i,k])
     params.a_theta = ad
@@ -289,7 +289,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
     bd = np.ones(model.K) * 0.3
     for k in range(model.K):
         #b = 0.1 * r.uniform()
-        b = 0.1 * rnd.uniform()
+        b = rnd.uniform(0, 0.1)
         bd[k] += b
         print "rate component %d: %f" % (k, bd[k])
     params.b_theta = bd
@@ -306,7 +306,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
     for i in range(data.item_count):
         for j in range(model.K):
             #d[j] = (0.3 + 0.1 * r.uniform())#*model.K # *k is my own addition
-            d[j] = (0.3 + 0.1 * rnd.uniform())#*model.K # *k is my own addition
+            d[j] = (0.3 + rnd.uniform(0,0.1))#*model.K # *k is my own addition
             params.beta[i,j] = cd[i,j] / d[j]
             params.logbeta[i,j] = pygsl.sf.psi(cd[i,j])[0] - np.log(d[j])
             #if i ==0 and j < 3:
@@ -317,7 +317,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
     for i in range(data.user_count):
         for j in range(model.K):
             #b[j] = (0.3 + 0.1 * r.uniform()) #* 2 just playing around
-            b[j] = (0.3 + 0.1 * rnd.uniform()) #* 2 just playing around
+            b[j] = (0.3 + rnd.uniform(0,0.1)) #* 2 just playing around
             params.theta[i,j] = ad[i,j] / b[j]
             #print params.logtheta[i,j]
             #print pygsl.sf.psi(ad[i,j])
@@ -398,8 +398,8 @@ def set_priors(model, data, \
                             1.0 * rating if model.nofdiv else \
                             1.0 * rating / \
                             data.friend_counts[user][item])
-            priors['b_tau'] += user_weighted_ratings
-            #priors['a_tau'] += user_weighted_ratings # does well, but not right
+        priors['b_tau'] += user_weighted_ratings
+        #priors['a_tau'] += user_weighted_ratings # does well, but not right
 
     return priors
 
