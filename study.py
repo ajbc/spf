@@ -16,8 +16,7 @@ from infer_svi import *
 
 def get_eval_sets(data):
     # so random subsets are always the same
-    lr = random.Random()
-    lr.seed(42)
+    np.random.seed(42)
 
     # return unmapped (original) sets of users & items
     users = data.test_user_data.keys()
@@ -26,11 +25,11 @@ def get_eval_sets(data):
         for item in data.test_user_data[user]:
             items.add(item)
 
-    if len(users)*len(items) > 1000*20000:
+    if len(users)*len(items) > 10000*20000:
         final_users = set()
         final_items = set()
-        randomly_sorted_users = sorted(sorted(users), key=lambda x: lr.rand())
-        while len(final_users) * len(final_items) < 1000*20000:
+        randomly_sorted_users = sorted(sorted(users), key=lambda x: np.random.rand())
+        while len(final_users) * len(final_items) < 10000*20000:
             user = randomly_sorted_users.pop()
             final_users.add(user)
             for item in data.test_user_data[user]:
@@ -274,7 +273,7 @@ class SPFStudy(BaselineStudy):
     def fit(self):
         #model = model_settings(self.K, MF=True, trust=True, intercept=True, \ INTERTAG
         model = model_settings(self.K, MF=True, trust=True, intercept=False, \
-            SVI=self.SVI)#, eta=True)
+            SVI=self.SVI, eta=True)
         priors = set_priors(model, self.data)
         params = init_params(model, priors, self.data, self.lr)
         infer(model, priors, params, data, self.out_dir, self.lr)

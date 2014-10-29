@@ -192,11 +192,11 @@ def infer(model, priors, params, data, dire='', rnd=False):
 
         iteration += 1
 
-        if stop:# or iteration > 61:
+        if stop or iteration > 1000:
             if stop:
                 print "breaking forever loop"
             else:
-                print "BAD", nh
+                print "killed on iteration = 1000", nh
             break
         old_C = C
 

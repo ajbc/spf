@@ -21,6 +21,7 @@ seed=948237247
 echo " * initializing study of main model (this will launch multiple processes"
 echo "   that will continue living after this bash script has completed)"
 
+#(nice -n 10 python2.7 study.py $1 --out $2 --K $K --seed $seed > $2/py-study.out 2> $2/py-study.err &)
 (python2.7 study.py $1 --out $2 --binary --K $K --seed $seed > $2/py-study.out 2> $2/py-study.err &)
 #(python2.7 study.py $1 --out $2 --binary --K $K --seed $seed --SVI > $2/py-study.out 2> $2/py-study.err &)
 

@@ -111,11 +111,11 @@ for line in open(join(data_stem, "test.tsv"), 'r'):
         user_set.add(user)
         item_set.add(item)
 
-if len(user_set)*len(item_set) > 1000*20000:
+if len(user_set)*len(item_set) > 10000*20000:
     final_users = set()
     final_items = set()
     randomly_sorted_users = sorted(sorted(user_set), key=lambda x: np.random.rand())
-    while len(final_users) * len(final_items) < 1000*20000:
+    while len(final_users) * len(final_items) < 10000*20000:
         user = randomly_sorted_users.pop()
         final_users.add(user)
         for item in user_data[user]:

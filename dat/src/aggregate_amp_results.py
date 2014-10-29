@@ -16,11 +16,13 @@ for dir in sorted(listdir(fits)):
         modelp = join(dirp,model)
         if not isdir(modelp):
             continue
-        print "\t", model
         if isfile(join(modelp, 'summary_eval.dat')):
+            print "\t", model
             f = open(join(modelp, 'summary_eval.dat'))
             for line in f:
                 metric, val = line.strip().split('\t')
                 fout.write("%s,%s,%s,%s\n" % (dir, model, metric, val))
             f.close()
+        else:
+            print "\t**", model
 fout.close()

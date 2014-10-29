@@ -1,6 +1,7 @@
 data=$1
-thresh=$2
+#thresh=$2
 
+mkdir $1/amp
 for ((i=0; i <= 100 ; i=i+10)); do
     mkdir $1/amp/$i
     echo "(de)amp $i"
