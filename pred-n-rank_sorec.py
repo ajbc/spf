@@ -120,8 +120,8 @@ if len(user_set)*len(item_set) > 10000*20000:
         final_users.add(user)
         for item in user_data[user]:
             final_items.add(item)
-    user_set = final_users
-    item_set = final_items
+    #user_set = final_users
+    #item_set = final_items
 
 print "evaluating predictions for each user-item pair"
 

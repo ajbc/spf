@@ -115,8 +115,8 @@ if len(user_set)*len(item_set) > 10000*20000:
         final_users.add(user)
         for item in user_data[user]:
             final_items.add(item)
-    user_set = final_users
-    item_set = final_items
+    #user_set = final_users
+    #item_set = final_items
 
 print "subsetted users (%d) and items (%d)." % (len(user_set), len(item_set))
 print len(user_data), "users to evaluate"
@@ -125,7 +125,9 @@ print "evaluating predictions for each user-item pair"
 
 print "creating rankings for each user..."
 f = open(join(fit_stem, "rankings.out"), 'w+')
-for user in user_set:
+for user in user_data:
+    if user==10015505:
+        print "WHOAT?"
     preds = {}
     for item in item_set:
         if item in user_data_train[user]:

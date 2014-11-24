@@ -37,6 +37,7 @@ def get_eval_sets(data):
         user_set = final_users
         item_set = final_items
 
+    #return user_set, item_set
     return users, items
 
 
@@ -512,7 +513,7 @@ if __name__ == '__main__':
 
     ### write out per-user network properties
     fout = open(join(args.out_dir, "user_stats.csv"), 'w+')
-    fout.write("user.id,num.train,num.heldout,degree,interconnectivity\n")
+    fout.write("user.id,num.train,num.heldout,degree,interconnectivity,num.shared.train\n")
     users, items = get_eval_sets(data)
     for user in users:
         num_heldout = data.heldout_count(user)
@@ -520,8 +521,9 @@ if __name__ == '__main__':
             num_train = len(data.user_data[data.users[user]])
             degree = data.friend_count(user)
             interconnectivity = data.interconnectivity(user)
-            fout.write("%d,%d,%d,%d,%d\n" % \
-                (user, num_train, num_heldout, degree, interconnectivity))
+            num_shared_train = data.num_shared_train(user)
+            fout.write("%d,%d,%d,%d,%d,%d\n" % \
+                (user, num_train, num_heldout, degree, interconnectivity, num_shared_train))
     fout.close()
 
     ### write out general data stats

@@ -77,6 +77,8 @@ for line in input_file:
     prediction = float(pred.strip())
     if rating != 0:
         found += 1
+        #prediction += 1e-10 # for social only
+        #likelihood +=
 
 
         user_rmse += (rating - prediction)**2
@@ -100,7 +102,7 @@ for line in input_file:
         fout.write('\n')'''
 
 
-# log old user
+# log lat user
 rmse += user_rmse
 mae += user_mae
 N += found

@@ -1033,6 +1033,15 @@ class dataset:
             count += len(f & friends)
         return count
 
+    def num_shared_train(self, user):
+        count = 0
+        for item in self.user_data[self.users[user]]:
+            for friend in self.friends[self.users[user]]:
+                if item in self.user_data[friend]:
+                    count += 1
+                    break
+        return count
+
     # TODO: these functions should be more organiszed (group by test/train)
     def rating(self, user, item):
         if self.binary:
