@@ -2,7 +2,7 @@
 #include "opt.h"
 
 extern gsl_rng * RANDOM_NUMBER;
-int min_iter = 15;
+int min_iter = 0; //15
 double beta_smooth = 0.01;
 
 c_ctr::c_ctr() {
@@ -447,6 +447,7 @@ void c_ctr::learn_map_estimate(const c_data* users, const c_data* items,
   double a_minus_b = param->a - param->b;
 
   while ((iter < param->max_iter and converge > 1e-4 ) or iter < min_iter) {
+    printf("iter=%d\t(max: %d)\n", iter, param->max_iter);
 
     likelihood_old = likelihood;
     likelihood = 0.0;

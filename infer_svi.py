@@ -42,7 +42,7 @@ def save_state(dire, iteration, model, params, data):
 
 
 # infer latent variables
-def infer(model, priors, params, data, dire='', rnd=False):
+def infer(model, priors, params, data, dire='', rnd=False, max_iter=1000):
     if not rnd:
         rnd = random.Random()
     old_C = 1.0
@@ -69,7 +69,6 @@ def infer(model, priors, params, data, dire='', rnd=False):
     MF_converged = True #not model.MF
     #while (not model.SVI and delta_C > delta_C_thresh) or \
     #    (model.SVI and sum(delta_C)/10 > delta_C_thresh): # not converged
-    #while iteration < 60:
     while True:
         if (delta_C[0] if model.SVI else delta_C) < \
             10**(log(delta_C_thresh)/log(10)/2) and not MF_converged:
@@ -152,7 +151,7 @@ def infer(model, priors, params, data, dire='', rnd=False):
 
 
         # save state regularly
-        if iteration % 5 == 0: # 50 == 0:
+        if iteration % 10 == 0: # 50 == 0:
             C = get_elbo(model, priors, params, data) #TODO: rename; it's not the elbo!
             if model.SVI:
                 delta_C.pop(0)
@@ -192,11 +191,11 @@ def infer(model, priors, params, data, dire='', rnd=False):
 
         iteration += 1
 
-        if stop or iteration > 1000:
+        if stop or iteration > max_iter:
             if stop:
                 print "breaking forever loop"
             else:
-                print "killed on iteration = 1000", nh
+                print "killed on iteration = ", iteration, nh
             break
         old_C = C
 
@@ -266,7 +265,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
             #c = 0.01 * r.uniform()
             c = rnd.uniform(0,0.01)
             cd[i,k] += c
-            print "shape user/item %d, component %d: %f" % (i, k, cd[i,k])
+            #print "shape user/item %d, component %d: %f" % (i, k, cd[i,k])
     params.a_beta = cd
 
     dd = np.ones(model.K) * 0.3
@@ -274,7 +273,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
         #d = 0.1 * r.uniform()
         d = rnd.uniform(0,0.1)
         dd[k] += d
-        print "rate component %d: %f" % (k, dd[k])
+        #print "rate component %d: %f" % (k, dd[k])
     params.b_beta = dd
 
     ad = np.ones((data.user_count, model.K)) * 0.3 #TODO: This constant should be in priors variable
@@ -283,7 +282,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
             #a = 0.01 * r.uniform()
             a = rnd.uniform(0,0.01)
             ad[i,k] += a
-            print "shape user/item %d, component %d: %f" % (i, k, ad[i,k])
+            #print "shape user/item %d, component %d: %f" % (i, k, ad[i,k])
     params.a_theta = ad
 
     bd = np.ones(model.K) * 0.3
@@ -291,7 +290,7 @@ def init_params(model, priors, data, rnd, spread=0.1):
         #b = 0.1 * r.uniform()
         b = rnd.uniform(0, 0.1)
         bd[k] += b
-        print "rate component %d: %f" % (k, bd[k])
+        #print "rate component %d: %f" % (k, bd[k])
     params.b_theta = bd
 
 
