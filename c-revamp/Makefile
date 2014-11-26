@@ -10,7 +10,7 @@ CC = g++ -O1 -larmadillo
 #GSL_INCLUDE_MAC = /usr/local/include/
 #GSL_LIB_MAC = /usr/local/lib/
 
-LSOURCE = example.cpp
+LSOURCE = main.cpp utils.cpp
 #LSOURCE = main.cpp utils.cpp corpus.cpp ctr.cpp data.cpp opt.cpp
 #LHEADER = utils.h corpus.h ctr.h data.h opt.h
 
@@ -22,13 +22,15 @@ LSOURCE = example.cpp
 
 #linux: $(LSOURCE) $(HEADER)
 #	  $(CC) -I$(GSL_INCLUDE) -L$(GSL_LIB) $(LSOURCE) -o ctr-condor $(LDFLAGS)
-linux: $(LSOURCE)
-	  $(CC) $(LSOURCE) -o example
+
+spf: $(LSOURCE)
+	  $(CC) $(LSOURCE) -o spf
+
+example: example.cpp
+	  $(CC) example.cpp -o example
 
 #linux-d: $(LSOURCE) $(HEADER)
 #	  $(CC) -g -I$(GSL_INCLUDE) -L$(GSL_LIB_MAC) $(LSOURCE) -o ctr-condor $@ $(LDFLAGS)
 
 clean:
-	-rm -f example
-clean-d:
-	-rm -f example
+	-rm -f example spf
