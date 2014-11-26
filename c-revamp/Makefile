@@ -10,7 +10,7 @@ CC = g++ -O1 -larmadillo
 #GSL_INCLUDE_MAC = /usr/local/include/
 #GSL_LIB_MAC = /usr/local/lib/
 
-LSOURCE = main.cpp utils.cpp
+LSOURCE = main.cpp utils.cpp data.cpp
 #LSOURCE = main.cpp utils.cpp corpus.cpp ctr.cpp data.cpp opt.cpp
 #LHEADER = utils.h corpus.h ctr.h data.h opt.h
 

@@ -190,6 +190,11 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
     
+    if (!factor_only && !file_exists(data + "/network.tsv")) {
+        printf("network data file (network.tsv) doesn't exist!  Exiting.\n");
+        exit(-1);
+    }
+    
     
     if (social_only && factor_only) {
         printf("Model cannot be both social only (SF) and factor only (PF).  Exiting.\n");
@@ -242,14 +247,21 @@ int main(int argc, char* argv[]) {
     printf("\tmaximum number of iterations: %d\n", max_iter);
     
 
-    // save the settings
+    // save the run settings
     printf("\nSAVING SETTINGS\n");
     model_settings settings;
     settings.set(out, data, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
         seed, max_iter, save_lag, k);
     settings.save(out + "/settings.txt");
- 
+
+    // read in the data
+    Data *dataset = new Data(settings.binary, settings.directed);
+    dataset->read_ratings(settings.datadir + "/train.tsv");
+    if (!factor_only)
+        dataset->read_network(settings.datadir + "/network.tsv");
+    dataset->read_validation(settings.datadir + "/validation.tsv");
+    dataset->save_summary(out + "/data_stats.txt");
  /* 
   /// init random numbe generator
   RANDOM_NUMBER = new_random_number_generator(random_seed);

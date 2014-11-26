@@ -1,64 +1,36 @@
-#include <iostream>
-#include <armadillo>
+#ifndef DATA_H
+#define DATA_H
 
-#include "utils.h"
-
+#include <string>
 using namespace std;
-using namespace arma;
-#include "data.h"
 
-struct model_settings {
-    string outdir;
-    string datadir;
+class Data {
+    private:
+        bool binary;
+        bool directed;
 
-    double a_theta;
-    double b_theta;
-    double a_beta;
-    double b_beta;
-    double a_tau;
-    double b_tau;
+    public:
+        Data(bool bin, bool dir);
+        void read_ratings(string filename);
+        void read_network(string filename);
+        void read_validation(string filename);
+        void save_summary(string filename);
+};
 
-    bool social_only;
-    bool factor_only;
-    bool binary;
-    bool directed;
-    
-    long seed;
-    int  save_lag;
-    int  max_iter;
 
-    int k;
-  
-    
-    void set(string out, string data, 
-             double athe, double bthe, double abet, double bbet, 
-             double atau, double btau,
-             bool social, bool factor, bool bin, bool dir,
-             long rand, int lag, int iter,
-             int num_factors) {
-        outdir = out;
-        datadir = data;
-        
-        a_theta = athe;
-        b_theta = bthe;
-        a_beta  = abet;
-        b_beta  = bbet;
-        a_tau   = atau;
-        b_tau   = btau;
+// dataset class
+//
+// TODO:
+//
 
-        social_only = social;
-        factor_only = factor;
-        binary = bin;
-        directed = dir;
-
-        seed = rand;
-        save_lag = lag;
-        max_iter = iter;
-
-        k = num_factors;
-    }
-
-    void save(string filename) {
+    /*fout = open(join(args.out_dir, "data_stats.dat"), 'w+')
+    fout.write("num users:\t%d\n" % len(data.users))
+    fout.write("num items:\t%d\n" % len(data.items))
+    fout.write("num ratings:\t%d\t%d\t%d\n" % \
+        (data.rating_count[0], data.rating_count[1], data.rating_count[2]))
+    fout.write("network connections:\t%d\n" % data.connection_count)
+    fout.close()*/
+    /*void save(string filename) {
         FILE * file = fopen(filename.c_str(), "w");
         
         fprintf(file, "data directory: %s\n", datadir.c_str());
@@ -109,5 +81,5 @@ struct model_settings {
         fprintf(file, "\tmaximum number of iterations: %d\n", max_iter);
     
         fclose(file);
-    }
-};
+    }*/
+#endif
