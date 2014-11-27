@@ -6,11 +6,12 @@ Data::Data(bool bin, bool dir) {
 }
 
 void Data::read_ratings(string filename) {
+    printf("[TODO]");
     FILE *fileptr = fopen(filename.c_str(), "r");
 
     int user, item, rating;
     while ((fscanf(fileptr, "%d\t%d\t%d\n", &user, &item, &rating) != EOF)) {
-        printf("user %d, item %d, rating %d\n", user, item, rating);
+        //printf("user %d, item %d, rating %d\n", user, item, rating);
 
         // map user and item ids
         if (user_ids.count(user) == 0)
@@ -23,14 +24,16 @@ void Data::read_ratings(string filename) {
 }
 
 void Data::read_network(string filename) {
+    printf("[TODO]");
 }
 
 void Data::read_validation(string filename) {
+    printf("[TODO]");
 }
 
 void Data::save_summary(string filename) {
     FILE * file = fopen(filename.c_str(), "w");
-    printf("TODO\n");
+    printf("[TODO]");
     
     fprintf(file, "num users:\t%d\n", user_ids.size());
     fprintf(file, "num items:\t%d\n", item_ids.size());

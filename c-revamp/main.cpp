@@ -256,52 +256,32 @@ int main(int argc, char* argv[]) {
     settings.save(out + "/settings.txt");
 
     // read in the data
+    printf("********************************************************************************\n");
+    printf("reading data\n");
     Data *dataset = new Data(settings.binary, settings.directed);
+    printf("\treading training data\t\t...\t");
     dataset->read_ratings(settings.datadir + "/train.tsv");
-    if (!factor_only)
+    printf("done\n");
+    if (!factor_only) {
+        printf("\treading network data\t\t...\t");
         dataset->read_network(settings.datadir + "/network.tsv");
+        printf("done\n");
+    }
+    printf("\treading validation data\t\t...\t");
     dataset->read_validation(settings.datadir + "/validation.tsv");
+    printf("done\n");
+    printf("\tsaving data stats\t\t...\t");
     dataset->save_summary(out + "/data_stats.txt");
- /* 
-  /// init random numbe generator
-  RANDOM_NUMBER = new_random_number_generator(random_seed);
+    printf("done\n");
 
-  // read users
-  printf("reading user matrix from %s ...\n", user_path);
-  c_data* users = new c_data(); 
-  users->read_data(user_path);
-  int num_users = (int)users->m_vec_data.size();
+    // create model instance
+    printf("\ncreating model instance\n");
+    SPF *model = new SPF(&settings, &dataset);
+    model->learn();
+    
+    delete model;
+    delete dataset;
+    delete settings;
 
-  // read items
-  printf("reading item matrix from %s ...\n", item_path);
-  c_data* items = new c_data(); 
-  items->read_data(item_path);
-  int num_items = (int)items->m_vec_data.size();
-
-  // create model instance
-  printf("model instance gutted for now\n");
-  /*c_ctr* ctr = new c_ctr();
-  ctr->set_model_parameters(num_factors, num_users, num_items);
-
-  c_corpus* c = NULL;
-  if (mult_path != NULL) {
-    // read word data
-    c = new c_corpus();
-    c->read_data(mult_path);
-    ctr->read_init_information(theta_init_path, beta_init_path, c, alpha_smooth);
-  }
-
-  if (learning_rate <= 0) {
-    ctr->learn_map_estimate(users, items, c, &ctr_param, directory);
-  } else {
-    ctr->stochastic_learn_map_estimate(users, items, c, &ctr_param, directory);
-  }*
-
-  free_random_number_generator(RANDOM_NUMBER);
-  if (c != NULL) delete c;
-
-  //delete ctr;
-  delete users;
-  delete items;*/
-  return 0;
+    return 0;
 }
