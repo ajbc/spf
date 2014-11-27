@@ -111,3 +111,12 @@ struct model_settings {
         fclose(file);
     }
 };
+
+class SPF {
+    private:
+        model_settings* settings;
+        Data* data;
+    public:
+        SPF(model_settings* model_set, Data* dataset);
+        void learn();
+};

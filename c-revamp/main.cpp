@@ -276,12 +276,12 @@ int main(int argc, char* argv[]) {
 
     // create model instance
     printf("\ncreating model instance\n");
-    SPF *model = new SPF(&settings, &dataset);
+    SPF *model = new SPF(&settings, dataset);
+    printf("commencing model inference\n");
     model->learn();
     
     delete model;
     delete dataset;
-    delete settings;
 
     return 0;
 }
