@@ -35,9 +35,17 @@ void Data::save_summary(string filename) {
     FILE * file = fopen(filename.c_str(), "w");
     printf("[TODO]");
     
-    fprintf(file, "num users:\t%d\n", user_ids.size());
-    fprintf(file, "num items:\t%d\n", item_ids.size());
+    fprintf(file, "num users:\t%d\n", user_count());
+    fprintf(file, "num items:\t%d\n", item_count());
     fprintf(file, "num ratings:\t%d\n", 0);
     fprintf(file, "network connections:\t%d\n", 0);
     fclose(file);
+}
+
+int Data::user_count() {
+    return user_ids.size();
+}
+
+int Data::item_count() {
+    return item_ids.size();
 }

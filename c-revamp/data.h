@@ -19,6 +19,9 @@ class Data {
         void read_network(string filename);
         void read_validation(string filename);
         void save_summary(string filename);
+
+        int user_count();
+        int item_count();
 };
 
 #endif

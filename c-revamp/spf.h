@@ -116,6 +116,10 @@ class SPF {
     private:
         model_settings* settings;
         Data* data;
+       
+        // model parameters
+        sp_mat tau; // user influence
+    
     public:
         SPF(model_settings* model_set, Data* dataset);
         void learn();
