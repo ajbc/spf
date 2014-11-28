@@ -4,6 +4,8 @@
 #include <string>
 #include <stdio.h>
 #include <map>
+#include <vector>
+
 using namespace std;
 
 class Data {
@@ -12,6 +14,8 @@ class Data {
         bool directed;
         map<int,int> user_ids;
         map<int,int> item_ids;
+
+        vector<int>* network;
 
     public:
         Data(bool bin, bool dir);
@@ -22,6 +26,11 @@ class Data {
 
         int user_count();
         int item_count();
+
+        int neighbor_count(int user);
+        int get_neighbor(int user, int n);
+
+        bool has_connection(int user, int neighbor);
 };
 
 #endif

@@ -59,7 +59,7 @@ struct model_settings {
     }
 
     void save(string filename) {
-        FILE * file = fopen(filename.c_str(), "w");
+        FILE* file = fopen(filename.c_str(), "w");
         
         fprintf(file, "data directory: %s\n", datadir.c_str());
 
@@ -119,6 +119,8 @@ class SPF {
        
         // model parameters
         sp_mat tau; // user influence
+
+        void initialize_parameters();
     
     public:
         SPF(model_settings* model_set, Data* dataset);
