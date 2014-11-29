@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <map>
 #include <vector>
+#include <armadillo>
 
 using namespace std;
+using namespace arma;
 
 class Data {
     private:
@@ -24,6 +26,8 @@ class Data {
         vector<int> train_ratings;
 
     public:
+        sp_mat ratings;
+        
         Data(bool bin, bool dir);
         void read_ratings(string filename);
         void read_network(string filename);

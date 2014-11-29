@@ -30,6 +30,10 @@ void Data::read_ratings(string filename) {
         }
     }
     fclose(fileptr);
+
+    ratings = sp_mat(user_count(), item_count());
+    for (int i = 0; i < num_training(); i++)
+        ratings(train_users[i], train_items[i]) = train_ratings[i];
 }
 
 void Data::read_network(string filename) {

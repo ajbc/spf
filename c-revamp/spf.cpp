@@ -47,7 +47,7 @@ void SPF::initialize_parameters() {
             // user influence
             for (n = 0; n < data->neighbor_count(user); n++) {
                 neighbor = data->get_neighbor(user, n);
-                tau(user, neighbor) = 1.0;
+                tau(neighbor, user) = 1.0;
             }
         }
     }
@@ -74,7 +74,13 @@ void SPF::save_parameters(string label) {
 }
 
 void SPF::update_shape(int user, int item, int rating) {
-    printf("TODO\n");
+    //TODO: phi_MF of size (settings->k)
+    
+    sp_mat phi_SF = tau.col(user) % data->ratings.col(item); // element-wise *
+    //phi_SF.print();
+    
+    printf("NEXT STEP");
+    
 }
 
 void SPF::update_MF() {
