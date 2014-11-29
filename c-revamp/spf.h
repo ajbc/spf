@@ -121,7 +121,13 @@ class SPF {
         sp_mat tau; // user influence
 
         void initialize_parameters();
+        void save_parameters(string label);
     
+        // parameter updates
+        void update_shape(int user, int item, int rating);
+        void update_MF();
+        void update_SF();
+        
     public:
         SPF(model_settings* model_set, Data* dataset);
         void learn();

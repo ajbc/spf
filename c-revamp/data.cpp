@@ -6,7 +6,7 @@ Data::Data(bool bin, bool dir) {
 }
 
 void Data::read_ratings(string filename) {
-    printf("[TODO]");
+    // read in training data
     FILE* fileptr = fopen(filename.c_str(), "r");
 
     int user, item, rating;
@@ -14,11 +14,20 @@ void Data::read_ratings(string filename) {
         //printf("user %d, item %d, rating %d\n", user, item, rating);
 
         // map user and item ids
-        if (user_ids.count(user) == 0)
+        if (user_ids.count(user) == 0) {
             user_ids[user] = user_count() - 1;
-        if (item_ids.count(item) == 0)    
+            reverse_user_ids[user_ids[user]] = user;
+        }
+        if (item_ids.count(item) == 0) {
             item_ids[item] = item_count() - 1;
+            reverse_item_ids[item_ids[item]] = item;
+        }
 
+        if (rating != 0) {
+            train_users.push_back(user_ids[user]);
+            train_items.push_back(item_ids[item]);
+            train_ratings.push_back(binary ? 1 : rating);
+        }
     }
     fclose(fileptr);
 }
@@ -92,4 +101,28 @@ int Data::neighbor_count(int user) {
 
 int Data::get_neighbor(int user, int n) {
     return network[user][n];
+}
+
+int Data::user_id(int user) {
+    return reverse_user_ids[user];
+}
+
+int Data::item_id(int item) {
+    return reverse_item_ids[item];
+}
+
+int Data::num_training() {
+    return train_ratings.size();
+}
+
+int Data::get_train_user(int i) {
+    return train_users[i];
+}
+
+int Data::get_train_item(int i) {
+    return train_items[i];
+}
+
+int Data::get_train_rating(int i) {
+    return train_ratings[i];
 }

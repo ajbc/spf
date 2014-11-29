@@ -14,8 +14,14 @@ class Data {
         bool directed;
         map<int,int> user_ids;
         map<int,int> item_ids;
+        map<int,int> reverse_user_ids;
+        map<int,int> reverse_item_ids;
 
         vector<int>* network;
+        
+        vector<int> train_users;
+        vector<int> train_items;
+        vector<int> train_ratings;
 
     public:
         Data(bool bin, bool dir);
@@ -31,6 +37,15 @@ class Data {
         int get_neighbor(int user, int n);
 
         bool has_connection(int user, int neighbor);
+
+        int user_id(int user);
+        int item_id(int item);
+
+        int num_training();
+
+        int get_train_user(int i);
+        int get_train_item(int i);
+        int get_train_rating(int i);
 };
 
 #endif

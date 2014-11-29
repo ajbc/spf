@@ -14,7 +14,27 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
 }
 
 void SPF::learn() {
+    int iteration = 0;
     printf("TODO: learn!\n");
+    while (iteration < 10) {
+        iteration++;
+        int user, item, rating;
+        for (int i = 0; i < data->num_training(); i++) {
+            user = data->get_train_user(i);
+            item = data->get_train_item(i);
+            rating = data->get_train_rating(i);
+            update_shape(user, item, rating);
+        }
+    
+        if (!settings->social_only)
+            update_MF();
+        
+        if (!settings->factor_only)
+            update_SF();
+
+    }
+
+    save_parameters("final");
 }
 
 
@@ -22,11 +42,45 @@ void SPF::learn() {
 
 void SPF::initialize_parameters() {
     int user, neighbor, n;
-    for (user = 0; user < data->user_count(); user++) {
-        // user influence
-        for (n = 0; n < data->neighbor_count(user); n++) {
-            neighbor = data->get_neighbor(user, n);
-            tau(user, neighbor) = 1;
+    if (!settings->factor_only) {
+        for (user = 0; user < data->user_count(); user++) {
+            // user influence
+            for (n = 0; n < data->neighbor_count(user); n++) {
+                neighbor = data->get_neighbor(user, n);
+                tau(user, neighbor) = 1.0;
+            }
         }
     }
+}
+
+void SPF::save_parameters(string label) {
+    FILE* file;
+    if (!settings->factor_only) {
+        // save tau
+        file = fopen((settings->outdir+"/tau-"+label+".dat").c_str(), "w");
+        fprintf(file, "uid\torig.uid\tvid\torig.vid\ttau\n");
+        int user, neighbor, n;
+        double tau_uv;
+        for (user = 0; user < data->user_count(); user++) {
+            for (n = 0; n < data->neighbor_count(user); n++) {
+                neighbor = data->get_neighbor(user, n);
+                tau_uv = tau(user, neighbor);
+                fprintf(file, "%d\t%d\t%d\t%d\t%f\n", user, data->user_id(user),
+                    neighbor, data->user_id(neighbor), tau_uv);
+            }
+        }
+        fclose(file);
+    }
+}
+
+void SPF::update_shape(int user, int item, int rating) {
+    printf("TODO\n");
+}
+
+void SPF::update_MF() {
+    printf("TODO\n");
+}
+
+void SPF::update_SF() {
+    printf("TODO\n");
 }
