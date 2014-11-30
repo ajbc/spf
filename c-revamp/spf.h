@@ -120,13 +120,20 @@ class SPF {
         // model parameters
         sp_mat tau; // user influence
 
+        // helper parameters
+        sp_mat logtau;
+        sp_mat a_tau;
+        sp_mat b_tau;
+
         void initialize_parameters();
+        void reset_helper_params();
         void save_parameters(string label);
     
         // parameter updates
         void update_shape(int user, int item, int rating);
         void update_MF();
         void update_SF();
+
         
     public:
         SPF(model_settings* model_set, Data* dataset);

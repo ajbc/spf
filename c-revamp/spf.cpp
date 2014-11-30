@@ -6,6 +6,9 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
 
     // user influence
     tau = sp_mat(data->user_count(), data->user_count());
+    //logtau = sp_mat(data->user_count(), data->user_count());
+    a_tau = sp_mat(data->user_count(), data->user_count());
+    b_tau = sp_mat(data->user_count(), data->user_count());
 
     
     initialize_parameters(); 
@@ -18,6 +21,10 @@ void SPF::learn() {
     printf("TODO: learn!\n");
     while (iteration < 10) {
         iteration++;
+        printf("iteration %d\n", iteration);
+        
+        reset_helper_params();
+
         int user, item, rating;
         for (int i = 0; i < data->num_training(); i++) {
             user = data->get_train_user(i);
@@ -33,7 +40,7 @@ void SPF::learn() {
             update_SF();
 
     }
-
+    
     save_parameters("final");
 }
 
@@ -41,16 +48,27 @@ void SPF::learn() {
 /* PRIVATE */
 
 void SPF::initialize_parameters() {
-    int user, neighbor, n;
+    int user, neighbor, n, item, i;
     if (!settings->factor_only) {
         for (user = 0; user < data->user_count(); user++) {
             // user influence
             for (n = 0; n < data->neighbor_count(user); n++) {
                 neighbor = data->get_neighbor(user, n);
                 tau(neighbor, user) = 1.0;
+
+                double overlap = settings->b_tau;
+                for (i = 0; i < data->item_count(user); i++) { 
+                    item = data->get_item(user, i);
+                    overlap += data->ratings(neighbor, item);
+                }
+                b_tau(neighbor, user) = overlap;
             }
         }
     }
+}
+
+void SPF::reset_helper_params() {
+    a_tau = data->network_spmat * settings->a_tau;
 }
 
 void SPF::save_parameters(string label) {
@@ -64,8 +82,8 @@ void SPF::save_parameters(string label) {
         for (user = 0; user < data->user_count(); user++) {
             for (n = 0; n < data->neighbor_count(user); n++) {
                 neighbor = data->get_neighbor(user, n);
-                tau_uv = tau(user, neighbor);
-                fprintf(file, "%d\t%d\t%d\t%d\t%f\n", user, data->user_id(user),
+                tau_uv = tau(neighbor, user);
+                fprintf(file, "%d\t%d\t%d\t%d\t%e\n", user, data->user_id(user),
                     neighbor, data->user_id(neighbor), tau_uv);
             }
         }
@@ -75,12 +93,26 @@ void SPF::save_parameters(string label) {
 
 void SPF::update_shape(int user, int item, int rating) {
     //TODO: phi_MF of size (settings->k)
+    //printf("  update shape (%d, %d, %d)\n", user, item, rating);
     
-    sp_mat phi_SF = tau.col(user) % data->ratings.col(item); // element-wise *
+    sp_mat phi_SF = tau.col(user) % data->ratings.col(item);
+    double phi_sum = accu(phi_SF);
+
+    if (phi_sum == 0)
+        return;
+
+    //log_phi_SF = log_phi_SF - (phi_sum + log(rating));
+    phi_SF /= phi_sum * rating;
     //phi_SF.print();
-    
-    printf("NEXT STEP");
-    
+
+    if (!settings->factor_only) {
+        int neighbor;
+        for (int n = 0; n < data->neighbor_count(user); n++) {
+            neighbor = data->get_neighbor(user, n);
+            a_tau(neighbor, user) += phi_SF(neighbor, 0);
+        }
+        //a_tau.col(user) = a_tau.col(user) + phi_SF;
+    }
 }
 
 void SPF::update_MF() {
@@ -88,5 +120,12 @@ void SPF::update_MF() {
 }
 
 void SPF::update_SF() {
-    printf("TODO\n");
+    int user, neighbor, n;
+    double a, b, c;
+    for (user = 0; user < data->user_count(); user++) {
+        for (n = 0; n < data->neighbor_count(user); n++) {
+            neighbor = data->get_neighbor(user, n);
+            tau(neighbor, user) = a_tau(neighbor, user) / b_tau(neighbor, user);
+        }
+    }
 }

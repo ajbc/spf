@@ -32,13 +32,17 @@ void Data::read_ratings(string filename) {
     fclose(fileptr);
 
     ratings = sp_mat(user_count(), item_count());
-    for (int i = 0; i < num_training(); i++)
+    user_items = new vector<int>[user_count()];
+    for (int i = 0; i < num_training(); i++) {
         ratings(train_users[i], train_items[i]) = train_ratings[i];
+        user_items[train_users[i]].push_back(train_items[i]);
+    }
 }
 
 void Data::read_network(string filename) {
     // initialize network data structures
     network = new vector<int>[user_count()];
+    network_spmat = sp_mat(user_count(), user_count());
 
     // read in network data from file
     FILE* fileptr = fopen(filename.c_str(), "r");
@@ -52,10 +56,14 @@ void Data::read_network(string filename) {
         u = user_ids[user];
         n = user_ids[neighbor];
         
-        if (!has_connection(u, n))
+        if (!has_connection(u, n)) {
             network[u].push_back(n);
-        if (!directed && !has_connection(n, u))
+            network_spmat(n,u) = 1.0;
+        }
+        if (!directed && !has_connection(n, u)) {
             network[n].push_back(u);
+            network_spmat(n,u) = 1.0;
+        }
     }
     fclose(fileptr);
 }
@@ -88,10 +96,8 @@ int Data::user_count() {
 }
 
 bool Data::has_connection(int user, int neighbor) {
-    for (int i = 0; i < network[user].size(); i++) {
-        if (network[user][i] == neighbor)
-            return true;
-    }
+    if (network_spmat(neighbor, user) == 1)
+        return true;
     return false;
 }
 
@@ -105,6 +111,14 @@ int Data::neighbor_count(int user) {
 
 int Data::get_neighbor(int user, int n) {
     return network[user][n];
+}
+
+int Data::item_count(int user) {
+    return user_items[user].size();
+}
+
+int Data::get_item(int user, int i) {
+    return user_items[user][i];
 }
 
 int Data::user_id(int user) {

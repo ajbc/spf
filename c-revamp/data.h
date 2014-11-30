@@ -20,6 +20,7 @@ class Data {
         map<int,int> reverse_item_ids;
 
         vector<int>* network;
+        vector<int>* user_items;
         
         vector<int> train_users;
         vector<int> train_items;
@@ -27,6 +28,7 @@ class Data {
 
     public:
         sp_mat ratings;
+        sp_mat network_spmat;
         
         Data(bool bin, bool dir);
         void read_ratings(string filename);
@@ -39,6 +41,9 @@ class Data {
 
         int neighbor_count(int user);
         int get_neighbor(int user, int n);
+        
+        int item_count(int user);
+        int get_item(int user, int i);
 
         bool has_connection(int user, int neighbor);
 
