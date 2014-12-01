@@ -4,6 +4,13 @@
 using namespace std;
 using namespace arma;
 
+sp_mat test_add(sp_mat A, sp_mat B) {
+    return A + B;
+}
+sp_mat test_mult(sp_mat A, sp_mat B) {
+    return A % B;
+}
+
 int main(int argc, char** argv) {
   sp_mat A = sp_mat(4,5);
   sp_mat B = sp_mat(4,5);
@@ -34,6 +41,13 @@ int main(int argc, char** argv) {
   }*/
 
   //A(1)* (B.t())(1);
+  C = sp_mat(4,5);
+  A(1,1) = 3;
+  B(1,1) = 12;
+  for (double i = 0; i < 1e7; i++) {
+    //C = test_add(A, B);
+    C = test_mult(A, B);
+  }
   
   return 0;
 }

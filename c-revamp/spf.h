@@ -1,5 +1,7 @@
 #include <iostream>
 #include <armadillo>
+#include <gsl/gsl_rng.h>
+//#include <gsl/gsl_randist.h>
 
 #include "utils.h"
 
@@ -119,11 +121,19 @@ class SPF {
        
         // model parameters
         sp_mat tau; // user influence
+        mat theta;  // user preferences
+        mat beta;   // item attributes
 
         // helper parameters
-        sp_mat logtau;
         sp_mat a_tau;
         sp_mat b_tau;
+        mat a_theta;
+        mat b_theta;
+        mat a_beta;
+        mat b_beta;
+    
+        // random number generator
+        gsl_rng* rand_gen;
 
         void initialize_parameters();
         void reset_helper_params();

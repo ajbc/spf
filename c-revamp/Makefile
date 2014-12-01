@@ -1,4 +1,4 @@
-CC = g++ -O1 -larmadillo
+CC = g++ -O1 -larmadillo -lgsl
 #CC = g++ -ansi -Wall -pedantic
 ##CFLAGS = -g -Wall -O3 -ffast-math -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
 ## CFLAGS = -g -Wall
@@ -30,7 +30,7 @@ profile: $(LSOURCE)
 	  $(CC) $(LSOURCE) -o spf -pg
 
 example: example.cpp
-	  $(CC) example.cpp -o example
+	  $(CC) example.cpp -o example -pg
 
 #linux-d: $(LSOURCE) $(HEADER)
 #	  $(CC) -g -I$(GSL_INCLUDE) -L$(GSL_LIB_MAC) $(LSOURCE) -o ctr-condor $@ $(LDFLAGS)
