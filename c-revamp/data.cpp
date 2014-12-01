@@ -81,7 +81,7 @@ void Data::read_network(string filename) {
 
 void Data::read_validation(string filename) {
     // read in training data
-    /*FILE* fileptr = fopen(filename.c_str(), "r");
+    FILE* fileptr = fopen(filename.c_str(), "r");
 
     int user, item, rating;
     set<long> dupe_checker;
@@ -93,35 +93,17 @@ void Data::read_validation(string filename) {
         dupe_checker.insert(dupe_id);
 
         // map user and item ids
-        if (user_ids.count(user) == 0) {
-            user_ids[user] = user_count() - 1;
-            reverse_user_ids[user_ids[user]] = user;
-        }
-        if (item_ids.count(item) == 0) {
-            item_ids[item] = item_count() - 1;
-            reverse_item_ids[item_ids[item]] = item;
-        }
+        if (user_ids.count(user) == 0 || item_ids.count(item) == 0)
+            continue;
 
-        if (rating != 0) {
-            train_users.push_back(user_ids[user]);
-            train_items.push_back(item_ids[item]);
-            train_ratings.push_back(binary ? 1 : rating);
-        }
+        validation_users.push_back(user_ids[user]);
+        validation_items.push_back(item_ids[item]);
+        if (binary)
+            validation_ratings.push_back(rating != 0 ? 1 : 0);
+        else
+            validation_ratings.push_back(binary ? 1 : rating);
     }
     fclose(fileptr);
-
-    //ratings = sp_mat(user_count(), item_count());
-    umat locations = umat(2, num_training());
-    colvec values = colvec(num_training());
-    user_items = new vector<int>[user_count()];
-    for (int i = 0; i < num_training(); i++) {
-        //ratings(train_users[i], train_items[i]) = train_ratings[i];
-        locations(0,i) = train_users[i]; // row
-        locations(1,i) = train_items[i]; // col
-        values(i) = train_ratings[i];
-        user_items[train_users[i]].push_back(train_items[i]);
-    }
-    ratings = sp_mat(locations, values, user_count(), item_count());*/
 }
 
 void Data::save_summary(string filename) {
@@ -129,7 +111,7 @@ void Data::save_summary(string filename) {
     
     fprintf(file, "num users:\t%d\n", user_count());
     fprintf(file, "num items:\t%d\n", item_count());
-    fprintf(file, "num ratings:\t%d\t%d\n", num_training, num_validation());
+    fprintf(file, "num ratings:\t%d\t%d\n", num_training(), num_validation());
 
     if (has_network) {
         int nc = 0;
