@@ -59,6 +59,7 @@ void Data::read_network(string filename) {
     FILE* fileptr = fopen(filename.c_str(), "r");
 
     int user, neighbor, u, n;
+    int network_count = 0;
     while ((fscanf(fileptr, "%d\t%d\n", &user, &neighbor) != EOF)) {
         // skip connections in which either user or neighbor is seen in training
         if (user_ids.count(user) == 0 || user_ids.count(neighbor) == 0)
@@ -69,14 +70,30 @@ void Data::read_network(string filename) {
         
         if (!has_connection(u, n)) {
             network[u].push_back(n);
-            network_spmat(n,u) = 1.0;
+            network_count++;
         }
         if (!directed && !has_connection(n, u)) {
             network[n].push_back(u);
-            network_spmat(u,n) = 1.0;
+            network_count++;
         }
     }
     fclose(fileptr);
+
+    umat locations = umat(2, network_count);
+    colvec values = colvec(network_count);
+    network_count = 0;
+    for (user = 0; user < user_count(); user++) {
+        for (n = 0; n < neighbor_count(user); n++) {
+            neighbor = get_neighbor(user, n);
+
+            locations(0, network_count) = user; // row
+            locations(1, network_count) = neighbor; // col
+            values(network_count) = 1;
+            network_count++;
+        }
+    }
+    network_spmat = sp_mat(locations, values, user_count(), user_count());
+
 }
 
 void Data::read_validation(string filename) {
