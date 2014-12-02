@@ -73,7 +73,7 @@ void Data::read_network(string filename) {
         }
         if (!directed && !has_connection(n, u)) {
             network[n].push_back(u);
-            network_spmat(n,u) = 1.0;
+            network_spmat(u,n) = 1.0;
         }
     }
     fclose(fileptr);

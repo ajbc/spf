@@ -28,3 +28,9 @@ int dir_exists(string dname) {
 void make_directory(string name) {
   mkdir(name.c_str(), S_IRUSR|S_IWUSR|S_IXUSR);
 }
+
+double factorial(int x) {
+    if (x == 0)
+        return 1;
+    return x * factorial(x - 1);
+}

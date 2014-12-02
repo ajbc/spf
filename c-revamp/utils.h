@@ -112,6 +112,8 @@ double vnormalize(gsl_vector* x);
 int dir_exists(string dname);
 bool file_exists(string filename);
 void make_directory(string name);
+
+double factorial(int x);
 /*
 double  digamma(double x);
 unsigned int rmultinomial(const gsl_vector* v);

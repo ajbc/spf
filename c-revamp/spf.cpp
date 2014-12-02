@@ -27,9 +27,13 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
 }
 
 void SPF::learn() {
+    double old_likelihood, delta_likelihood, likelihood = -1e10; 
+    int likelihood_decreasing_count = 0;
+    
     int iteration = 0;
     char iter_as_str[4];
-    while (iteration < 100) {
+    bool converged = false;
+    while (!converged) {
         iteration++;
         printf("iteration %d\n", iteration);
         
@@ -50,13 +54,47 @@ void SPF::learn() {
             update_SF();
 
         if (iteration % settings->save_lag == 0) {
-            printf(" saving\n");
-            sprintf(iter_as_str, "%04d", iteration);
-            save_parameters(iter_as_str);
+            old_likelihood = likelihood;
+            likelihood = get_ave_log_likelihood();
+
+            if (likelihood < old_likelihood)
+                likelihood_decreasing_count += 1;
+            else
+                likelihood_decreasing_count = 0;
+            delta_likelihood = abs((old_likelihood - likelihood) / old_likelihood);
+            printf("delta: %f\n", delta_likelihood);
+            printf("old:   %f\n", old_likelihood);
+            printf("new:   %f\n", likelihood);
+            if (iteration >= settings->min_iter &&
+                delta_likelihood < settings->likelihood_delta) {
+                printf("Model converged.\n");
+                converged = true;
+            } else if (iteration >= settings->min_iter &&
+                likelihood_decreasing_count >= 2) {
+                printf("Likelihood decreasing.\n");
+                converged = true;
+            } else if (iteration >= settings->max_iter) {
+                printf("Reached maximum number of iterations.\n");
+                converged = true;
+            } else {
+                printf(" saving\n");
+                sprintf(iter_as_str, "%04d", iteration);
+                save_parameters(iter_as_str);
+            }
         }
     }
     
     save_parameters("final");
+}
+
+double SPF::predict(int user, int item) {
+    double prediction = settings->social_only ? 1e-10 : 0;
+    
+    prediction += accu(tau.col(user) % data->ratings.col(item));
+    if (!settings->social_only)
+        prediction += accu(theta.col(user) % beta.col(item));
+
+    return prediction;
 }
 
 
@@ -71,12 +109,12 @@ void SPF::initialize_parameters() {
                 neighbor = data->get_neighbor(user, n);
                 tau(neighbor, user) = 1.0;
 
-                double overlap = settings->b_tau;
-                for (i = 0; i < data->item_count(user); i++) { 
-                    item = data->get_item(user, i);
-                    overlap += data->ratings(neighbor, item);
-                }
-                b_tau(neighbor, user) = overlap;
+                double all = settings->b_tau;
+                for (i = 0; i < data->item_count(neighbor); i++) { 
+                    item = data->get_item(neighbor, i);
+                    all += data->ratings(neighbor, item);
+                } //TODO: this doeesn't need to be done as much... only one time per user (U), not UxU times
+                b_tau(neighbor, user) = all;
             }
         }
     }
@@ -205,4 +243,21 @@ void SPF::update_SF() {
             tau(neighbor, user) = a_tau(neighbor, user) / b_tau(neighbor, user);
         }
     }
+}
+
+double SPF::get_ave_log_likelihood() {
+    double likelihood, prediction;
+    int user, item, rating;
+    for (int i = 0; i < data->num_validation(); i++) {
+        user = data->get_validation_user(i);
+        item = data->get_validation_item(i);
+        rating = data->get_validation_rating(i);
+
+        prediction = predict(user, item);
+        
+        likelihood +=
+            log(prediction) * rating - log(factorial(rating)) - prediction;
+    }
+
+    return likelihood / data->num_validation();
 }

@@ -25,9 +25,11 @@ struct model_settings {
     bool binary;
     bool directed;
     
-    long seed;
-    int  save_lag;
-    int  max_iter;
+    long   seed;
+    int    save_lag;
+    int    max_iter;
+    int    min_iter;
+    double likelihood_delta;
 
     int k;
   
@@ -36,7 +38,7 @@ struct model_settings {
              double athe, double bthe, double abet, double bbet, 
              double atau, double btau,
              bool social, bool factor, bool bin, bool dir,
-             long rand, int lag, int iter,
+             long rand, int lag, int iter_max, int iter_min, double delta,
              int num_factors) {
         outdir = out;
         datadir = data;
@@ -55,7 +57,9 @@ struct model_settings {
 
         seed = rand;
         save_lag = lag;
-        max_iter = iter;
+        max_iter = iter_max;
+        min_iter = iter_min;
+        likelihood_delta = delta;
 
         k = num_factors;
     }
@@ -106,9 +110,11 @@ struct model_settings {
 
         
         fprintf(file, "\ninference parameters:\n");
-        fprintf(file, "\tseed:                         %d\n", (int)seed);
-        fprintf(file, "\tsave lag:                     %d\n", save_lag);
-        fprintf(file, "\tmaximum number of iterations: %d\n", max_iter);
+        fprintf(file, "\tseed:                                     %d\n", (int)seed);
+        fprintf(file, "\tsave lag:                                 %d\n", save_lag);
+        fprintf(file, "\tmaximum number of iterations:             %d\n", max_iter);
+        fprintf(file, "\tminimum number of iterations:             %d\n", min_iter);
+        fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);
     
         fclose(file);
     }
@@ -144,8 +150,11 @@ class SPF {
         void update_MF();
         void update_SF();
 
+        double get_ave_log_likelihood();
+
         
     public:
         SPF(model_settings* model_set, Data* dataset);
         void learn();
+        double predict(int user, int item);
 };
