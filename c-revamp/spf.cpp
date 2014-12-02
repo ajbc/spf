@@ -28,7 +28,7 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
 
 void SPF::learn() {
     int iteration = 0;
-    printf("TODO: learn!\n");
+    char iter_as_str[4];
     while (iteration < 100) {
         iteration++;
         printf("iteration %d\n", iteration);
@@ -48,6 +48,12 @@ void SPF::learn() {
         
         if (!settings->factor_only)
             update_SF();
+
+        if (iteration % settings->save_lag == 0) {
+            printf(" saving\n");
+            sprintf(iter_as_str, "%04d", iteration);
+            save_parameters(iter_as_str);
+        }
     }
     
     save_parameters("final");

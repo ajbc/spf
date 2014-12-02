@@ -252,7 +252,7 @@ int main(int argc, char* argv[]) {
     model_settings settings;
     settings.set(out, data, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
-        seed, max_iter, save_lag, k);
+        seed, save_lag, max_iter, k);
     settings.save(out + "/settings.txt");
 
     // read in the data
