@@ -52,7 +52,6 @@ void Data::read_ratings(string filename) {
 void Data::read_network(string filename) {
     // initialize network data structures
     network = new vector<int>[user_count()];
-    network_spmat = sp_mat(user_count(), user_count());
     has_network = true;
 
     // read in network data from file
@@ -68,11 +67,11 @@ void Data::read_network(string filename) {
         u = user_ids[user];
         n = user_ids[neighbor];
         
-        if (!has_connection(u, n)) {
+        if (!has_connection_init(u, n)) {
             network[u].push_back(n);
             network_count++;
         }
-        if (!directed && !has_connection(n, u)) {
+        if (!directed && !has_connection_init(n, u)) {
             network[n].push_back(u);
             network_count++;
         }
@@ -145,6 +144,14 @@ void Data::save_summary(string filename) {
 
 int Data::user_count() {
     return user_ids.size();
+}
+
+bool Data::has_connection_init(int user, int neighbor) {
+    for (int i = 0; i < network[user].size(); i++) {
+        if (network[user][i] == neighbor)
+            return true;
+    }
+    return false;
 }
 
 bool Data::has_connection(int user, int neighbor) {

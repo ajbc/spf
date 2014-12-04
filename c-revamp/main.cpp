@@ -178,7 +178,8 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
     
-    if (!dir_exists(out)) make_directory(out);
+    if (dir_exists(out)) remove_directory(out);
+    make_directory(out);
     printf("output directory: %s\n", out.c_str());
     
     if (data == "") {

@@ -29,6 +29,10 @@ void make_directory(string name) {
   mkdir(name.c_str(), S_IRUSR|S_IWUSR|S_IXUSR);
 }
 
+void remove_directory(string name) {
+  rmdir(name.c_str());
+}
+
 double factorial(int x) {
     if (x == 0)
         return 1;

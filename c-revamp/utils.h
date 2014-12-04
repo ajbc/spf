@@ -112,6 +112,7 @@ double vnormalize(gsl_vector* x);
 int dir_exists(string dname);
 bool file_exists(string filename);
 void make_directory(string name);
+void remove_directory(string name);
 
 double factorial(int x);
 /*

@@ -61,7 +61,9 @@ void SPF::learn() {
                 likelihood_decreasing_count += 1;
             else
                 likelihood_decreasing_count = 0;
-            delta_likelihood = abs((old_likelihood - likelihood) / old_likelihood);
+            delta_likelihood = abs((old_likelihood - likelihood) / 
+                old_likelihood);
+            log_convergence(iteration, likelihood, delta_likelihood);
             printf("delta: %f\n", delta_likelihood);
             printf("old:   %f\n", old_likelihood);
             printf("new:   %f\n", likelihood);
@@ -260,4 +262,10 @@ double SPF::get_ave_log_likelihood() {
     }
 
     return likelihood / data->num_validation();
+}
+
+void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
+    FILE* file = fopen((settings->outdir+"/log_likelihood.dat").c_str(), "a");
+    fprintf(file, "%d\t%f\t%f\n", iteration, ave_ll, delta_ll);
+    fclose(file);
 }

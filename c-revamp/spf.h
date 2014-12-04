@@ -151,6 +151,7 @@ class SPF {
         void update_SF();
 
         double get_ave_log_likelihood();
+        void log_convergence(int iteration, double ave_ll, double delta_ll);
 
         
     public:

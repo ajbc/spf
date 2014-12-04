@@ -35,6 +35,9 @@ class Data {
         vector<int> validation_items;
         vector<int> validation_ratings;
 
+        // for use in initializing the network data structures only
+        bool has_connection_init(int user, int neighbor);
+
 
     public:
         sp_mat ratings; //TODO: should these be sp_umat types?
