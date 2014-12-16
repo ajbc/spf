@@ -266,6 +266,7 @@ void SPF::evaluate_rankings() {
     user_sum_crr += user_crr;
     user_sum_ncrr += user_ncrr;
     user_sum_ndcg += user_ndcg;
+
     user_count++;
 
     fclose(file);
@@ -284,12 +285,9 @@ void SPF::evaluate_rankings() {
     fprintf(file, "CRR\t%f\t%f\n", user_sum_crr/user_count, crr/heldout_count);
     fprintf(file, "NCRR\t%f\t---\n", user_sum_ncrr/user_count);
     fprintf(file, "NDCG\t%f\t---\n", user_sum_ndcg/user_count);
-    //fprintf(file, "prec@1\t%f\t%f\n", user_sum_p1/user_count, 
-    //    precision1/heldout_count);
-    //fprintf(file, "prec@10\t%f\t%f\n", user_sum_p10/user_count, 
-    //    precision10/heldout_count);
-    //fprintf(file, "prec@100\t%f\t%f\n", user_sum_p100/user_count, 
-    //    precision100/heldout_count);
+    //fprintf(file, "prec@1\t%f\t---\n", user_sum_p1/user_count);
+    //fprintf(file, "prec@10\t%f\t---\n", user_sum_p10/user_count);
+    //fprintf(file, "prec@100\t%f\t---\n", user_sum_p100/user_count);
     fclose(file);
 }
 
