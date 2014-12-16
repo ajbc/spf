@@ -149,7 +149,7 @@ void SPF::evaluate_rankings() {
     // compute eval metrics from ratings/rankings
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "r");
     FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
-    fprintf(user_file, "user.id\tnum.heldout\trmse\tmae\tave.rank\tfirst\n");
+    fprintf(user_file, "user.id\tnum.heldout\trmse\tmae\tave.rank\tfirst\tcrr\n");
 
     // overall attributes to track
     int user_count = 0;
@@ -159,10 +159,12 @@ void SPF::evaluate_rankings() {
     double rmse = 0;
     double mae = 0;
     double aggr_rank = 0;
+    double crr = 0;
     double user_sum_rmse = 0;
     double user_sum_mae = 0;
     double user_sum_rank = 0;
     double user_sum_first = 0;
+    double user_sum_crr = 0;
 
     // per user attibutes
     double user_rmse = 0;
@@ -170,6 +172,7 @@ void SPF::evaluate_rankings() {
     int user_heldout = 0;
     double user_rank = 0;
     int first = 0;
+    double user_crr = 0;
         
     // per line variables
     int user, item, rating, rank;
@@ -187,11 +190,12 @@ void SPF::evaluate_rankings() {
                 user_rank /= user_heldout;
                 
                 log_user(user_file, prev_user, user_heldout, user_rmse, 
-                    user_mae, user_rank, first);
+                    user_mae, user_rank, first, user_crr);
                 user_sum_rmse += user_rmse;
                 user_sum_mae += user_mae;
                 user_sum_rank += user_rank;
                 user_sum_first += first;
+                user_sum_crr += user_crr;
             }
 
             user_count++;
@@ -199,6 +203,7 @@ void SPF::evaluate_rankings() {
             user_mae = 0;
             user_rank = 0;
             first = 0;
+            user_crr = 0;
 
             user_heldout = 0;
             prev_user = user;
@@ -220,6 +225,10 @@ void SPF::evaluate_rankings() {
             aggr_rank += rank;
             user_rank += rank;
 
+            local_metric = 1.0 / rank;
+            user_crr += local_metric;
+            crr += local_metric;
+
             if (first == 0)
                 first = rank;
         }
@@ -229,12 +238,13 @@ void SPF::evaluate_rankings() {
     user_mae /= user_heldout;
     user_rank /= user_heldout;
     log_user(user_file, user, user_heldout, user_rmse, user_mae, user_rank,
-        first);
+        first, user_crr);
     // aggregate metrics
     user_sum_rmse += user_rmse;
     user_sum_mae += user_mae;
     user_sum_rank += user_rank;
     user_sum_first += first;
+    user_sum_crr += user_crr;
     user_count++;
 
     fclose(file);
@@ -250,7 +260,7 @@ void SPF::evaluate_rankings() {
     fprintf(file, "rank\t%f\t%f\n", user_sum_rank/user_count, 
         aggr_rank/heldout_count);
     fprintf(file, "first\t%f\t---\n", user_sum_first/user_count);
-    //fprintf(file, "CRR\t%f\t%f\n", user_sum_crr/user_count, crr/heldout_count);
+    fprintf(file, "CRR\t%f\t%f\n", user_sum_crr/user_count, crr/heldout_count);
     //fprintf(file, "NCRR\t%f\t---\n", user_sum_ncrr/user_count);
     //fprintf(file, "NDCG\t%f\t---\n", user_sum_ndcg/user_count);
     //fprintf(file, "prec@1\t%f\t%f\n", user_sum_p1/user_count, 
@@ -434,6 +444,6 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
 }
 
 void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
-    double rank, int first) {
-    fprintf(file, "%d\t%d\t%f\t%f\t%f\t%d\n", user, heldout, rmse, mae, rank, first);
+    double rank, int first, double crr) {
+    fprintf(file, "%d\t%d\t%f\t%f\t%f\t%d\t%f\n", user, heldout, rmse, mae, rank, first, crr);
 }
