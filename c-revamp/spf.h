@@ -153,7 +153,7 @@ class SPF {
         double get_ave_log_likelihood();
         void log_convergence(int iteration, double ave_ll, double delta_ll);
         void log_user(FILE* file, int user, int heldout, double rmse, 
-            double mae);
+            double mae, double rank, int first);
 
         
     public:

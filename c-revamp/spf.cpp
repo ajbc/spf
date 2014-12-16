@@ -149,7 +149,7 @@ void SPF::evaluate_rankings() {
     // compute eval metrics from ratings/rankings
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "r");
     FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
-    fprintf(user_file, "user.id\tnum.heldout\trmse\tmae\n");
+    fprintf(user_file, "user.id\tnum.heldout\trmse\tmae\tave.rank\tfirst\n");
 
     // overall attributes to track
     int user_count = 0;
@@ -158,13 +158,18 @@ void SPF::evaluate_rankings() {
     // overall metrics to track
     double rmse = 0;
     double mae = 0;
+    double aggr_rank = 0;
     double user_sum_rmse = 0;
     double user_sum_mae = 0;
+    double user_sum_rank = 0;
+    double user_sum_first = 0;
 
     // per user attibutes
     double user_rmse = 0;
     double user_mae = 0;
     int user_heldout = 0;
+    double user_rank = 0;
+    int first = 0;
         
     // per line variables
     int user, item, rating, rank;
@@ -178,16 +183,22 @@ void SPF::evaluate_rankings() {
         if (user != prev_user) {
             if (prev_user != -1) {
                 user_rmse = sqrt(user_rmse / user_heldout);
-                user_mae = user_mae / user_heldout;
+                user_mae /= user_heldout;
+                user_rank /= user_heldout;
                 
-                log_user(user_file, prev_user, user_heldout, user_rmse, user_mae);
+                log_user(user_file, prev_user, user_heldout, user_rmse, 
+                    user_mae, user_rank, first);
                 user_sum_rmse += user_rmse;
                 user_sum_mae += user_mae;
+                user_sum_rank += user_rank;
+                user_sum_first += first;
             }
 
             user_count++;
             user_rmse = 0;
             user_mae = 0;
+            user_rank = 0;
+            first = 0;
 
             user_heldout = 0;
             prev_user = user;
@@ -205,15 +216,25 @@ void SPF::evaluate_rankings() {
             local_metric = abs(rating - pred);
             mae += local_metric;
             user_mae += local_metric;
-            //printf("+%f = %f u%d=%f\n", local_metric, mae/heldout_count, user, user_mae);
+
+            aggr_rank += rank;
+            user_rank += rank;
+
+            if (first == 0)
+                first = rank;
         }
     }
+    // log the last user
     user_rmse = sqrt(user_rmse / user_heldout);
-    user_mae = user_mae / user_heldout;
-    log_user(user_file, user, user_heldout, user_rmse, user_mae);
+    user_mae /= user_heldout;
+    user_rank /= user_heldout;
+    log_user(user_file, user, user_heldout, user_rmse, user_mae, user_rank,
+        first);
     // aggregate metrics
     user_sum_rmse += user_rmse;
     user_sum_mae += user_mae;
+    user_sum_rank += user_rank;
+    user_sum_first += first;
     user_count++;
 
     fclose(file);
@@ -226,6 +247,18 @@ void SPF::evaluate_rankings() {
     fprintf(file, "RMSE\t%f\t%f\n", user_sum_rmse/user_count, 
         sqrt(rmse/heldout_count));
     fprintf(file, "MAE\t%f\t%f\n", user_sum_mae/user_count, mae/heldout_count);
+    fprintf(file, "rank\t%f\t%f\n", user_sum_rank/user_count, 
+        aggr_rank/heldout_count);
+    fprintf(file, "first\t%f\t---\n", user_sum_first/user_count);
+    //fprintf(file, "CRR\t%f\t%f\n", user_sum_crr/user_count, crr/heldout_count);
+    //fprintf(file, "NCRR\t%f\t---\n", user_sum_ncrr/user_count);
+    //fprintf(file, "NDCG\t%f\t---\n", user_sum_ndcg/user_count);
+    //fprintf(file, "prec@1\t%f\t%f\n", user_sum_p1/user_count, 
+    //    precision1/heldout_count);
+    //fprintf(file, "prec@10\t%f\t%f\n", user_sum_p10/user_count, 
+    //    precision10/heldout_count);
+    //fprintf(file, "prec@100\t%f\t%f\n", user_sum_p100/user_count, 
+    //    precision100/heldout_count);
     fclose(file);
 }
 
@@ -400,6 +433,7 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
     fclose(file);
 }
 
-void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae) {
-    fprintf(file, "%d\t%d\t%f\t%f\n", user, heldout, rmse, mae);
+void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
+    double rank, int first) {
+    fprintf(file, "%d\t%d\t%f\t%f\t%f\t%d\n", user, heldout, rmse, mae, rank, first);
 }
