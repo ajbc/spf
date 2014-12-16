@@ -149,7 +149,7 @@ void SPF::evaluate_rankings() {
     // compute eval metrics from ratings/rankings
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "r");
     FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
-    fprintf(user_file, "user.id\tnum.heldout\trmse\n");
+    fprintf(user_file, "user.id\tnum.heldout\trmse\tmae\n");
 
     // overall attributes to track
     int user_count = 0;
@@ -157,29 +157,37 @@ void SPF::evaluate_rankings() {
 
     // overall metrics to track
     double rmse = 0;
+    double mae = 0;
     double user_sum_rmse = 0;
+    double user_sum_mae = 0;
 
     // per user attibutes
     double user_rmse = 0;
+    double user_mae = 0;
     int user_heldout = 0;
         
     // per line variables
     int user, item, rating, rank;
     double pred;
     int prev_user = -1;
-    double local_rmse;
+    double local_metric;
 
     //fscanf(file, "%s\n");
     while ((fscanf(file, "%d\t%d\t%lf\t%d\t%d\n", &user, &item, &pred, &rank,
         &rating) != EOF)) {
         if (user != prev_user) {
-            user_count++;
-            user_rmse = sqrt(user_rmse / user_heldout);
-            if (prev_user != -1)
-                log_user(user_file, user, user_heldout, user_rmse);
+            if (prev_user != -1) {
+                user_rmse = sqrt(user_rmse / user_heldout);
+                user_mae = user_mae / user_heldout;
+                
+                log_user(user_file, prev_user, user_heldout, user_rmse, user_mae);
+                user_sum_rmse += user_rmse;
+                user_sum_mae += user_mae;
+            }
 
-            user_sum_rmse += user_rmse;
+            user_count++;
             user_rmse = 0;
+            user_mae = 0;
 
             user_heldout = 0;
             prev_user = user;
@@ -187,16 +195,26 @@ void SPF::evaluate_rankings() {
         
         // compute metrics only on held-out items
         if (rating != 0) {
-            printf("\tuser:%d (item:%d)\trating:%d\tpred:%f\t%d [%d]\n", user, item, rating, pred, rank, user_heldout);
             user_heldout++;
             heldout_count++;
 
-            local_rmse = pow(rating - pred, 2);
-            rmse += local_rmse;
-            user_rmse += local_rmse;
+            local_metric = pow(rating - pred, 2);
+            rmse += local_metric;
+            user_rmse += local_metric;
+            
+            local_metric = abs(rating - pred);
+            mae += local_metric;
+            user_mae += local_metric;
+            //printf("+%f = %f u%d=%f\n", local_metric, mae/heldout_count, user, user_mae);
         }
     }
-    log_user(user_file, user, user_heldout, user_rmse);
+    user_rmse = sqrt(user_rmse / user_heldout);
+    user_mae = user_mae / user_heldout;
+    log_user(user_file, user, user_heldout, user_rmse, user_mae);
+    // aggregate metrics
+    user_sum_rmse += user_rmse;
+    user_sum_mae += user_mae;
+    user_count++;
 
     fclose(file);
     fclose(user_file);
@@ -205,8 +223,9 @@ void SPF::evaluate_rankings() {
     // write out results
     file = fopen((settings->outdir+"/eval_summary.dat").c_str(), "w");
     fprintf(file, "metric\tuser average\theldout pair average\n");
-    fprintf(file, "RMSE\t%f\t%f\n", user_rmse/user_count, 
+    fprintf(file, "RMSE\t%f\t%f\n", user_sum_rmse/user_count, 
         sqrt(rmse/heldout_count));
+    fprintf(file, "MAE\t%f\t%f\n", user_sum_mae/user_count, mae/heldout_count);
     fclose(file);
 }
 
@@ -381,6 +400,6 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
     fclose(file);
 }
 
-void SPF::log_user(FILE* file, int user, int heldout, double rmse) {
-    fprintf(file, "%d\t%d\t%f\n", user, heldout, rmse);
+void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae) {
+    fprintf(file, "%d\t%d\t%f\t%f\n", user, heldout, rmse, mae);
 }
