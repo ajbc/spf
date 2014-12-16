@@ -76,6 +76,7 @@ void Data::read_network(string filename) {
             network_count++;
         }
     }
+
     fclose(fileptr);
 
     umat locations = umat(2, network_count);
@@ -91,12 +92,13 @@ void Data::read_network(string filename) {
             network_count++;
         }
     }
+
     network_spmat = sp_mat(locations, values, user_count(), user_count());
 
 }
 
 void Data::read_validation(string filename) {
-    // read in training data
+    // read in validation data
     FILE* fileptr = fopen(filename.c_str(), "r");
 
     int user, item, rating;
@@ -119,6 +121,44 @@ void Data::read_validation(string filename) {
         else
             validation_ratings.push_back(binary ? 1 : rating);
     }
+
+    fclose(fileptr);
+    
+    umat locations = umat(2, num_validation());
+    colvec values = colvec(num_validation());
+    for (int i = 0; i < num_validation(); i++) {
+        locations(0, i) = validation_users[i];
+        locations(1, i) = validation_items[i];
+        values(i) = validation_ratings[i];
+    }
+
+    validation_ratings_matrix = sp_mat(locations, values, user_count(), item_count());
+}
+
+void Data::read_test(string filename) {
+    // read in test data
+    FILE* fileptr = fopen(filename.c_str(), "r");
+
+    int user, item, rating, u, i;
+    test_ratings = sp_umat(user_count(), item_count());
+    while ((fscanf(fileptr, "%d\t%d\t%d\n", &user, &item, &rating) != EOF)) {
+        // map user and item ids
+        if (user_ids.count(user) == 0 || item_ids.count(item) == 0)
+            continue;
+        u = user_ids[user];
+        i = item_ids[item];
+        if (ratings(u, i) != 0 || validation_ratings_matrix(u, i) != 0)
+            continue;
+        
+        if (binary)
+            rating = rating != 0 ? 1: 0;
+
+        test_users.insert(u);
+        test_items.insert(i);
+        
+        test_ratings(u, i) = rating;
+    }
+
     fclose(fileptr);
 }
 
@@ -220,4 +260,8 @@ int Data::get_validation_item(int i) {
 
 int Data::get_validation_rating(int i) {
     return validation_ratings[i];
+}
+
+bool Data::in_validation(int user, int item) {
+    return validation_ratings_matrix(user, item) != 0;
 }

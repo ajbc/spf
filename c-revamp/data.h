@@ -34,6 +34,7 @@ class Data {
         vector<int> validation_users;
         vector<int> validation_items;
         vector<int> validation_ratings;
+        sp_mat validation_ratings_matrix;
 
         // for use in initializing the network data structures only
         bool has_connection_init(int user, int neighbor);
@@ -47,6 +48,7 @@ class Data {
         void read_ratings(string filename);
         void read_network(string filename);
         void read_validation(string filename);
+        void read_test(string filename);
         void save_summary(string filename);
 
         int user_count();
@@ -74,6 +76,12 @@ class Data {
         int get_validation_user(int i);
         int get_validation_item(int i);
         int get_validation_rating(int i);
+        bool in_validation(int user, int item);
+        
+        // test data
+        set<int> test_users;
+        set<int> test_items;
+        sp_umat test_ratings;
 };
 
 #endif

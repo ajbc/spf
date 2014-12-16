@@ -98,6 +98,117 @@ double SPF::predict(int user, int item) {
 
     return prediction;
 }
+ 
+
+bool prediction_compare(const double* first, const double* second) {
+    return first[1] > second[1];
+}
+void SPF::predict_and_rank() {
+    printf("predicting ratings and ranking items for each user\n");
+    FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "w");
+    //fprintf(file, "user\titem\tpred\trank\trating\n");
+    int user, item;
+    list<pair<double, int> > ratings;
+    for (set<int>::iterator iter_user = data->test_users.begin(); 
+        iter_user != data->test_users.end();
+        iter_user++){
+
+        user = *iter_user;
+
+        for (set<int>::iterator iter_item = data->test_items.begin(); 
+            iter_item != data->test_items.end();
+            iter_item++){
+
+            item = *iter_item;
+
+            // don't rank items that we've already seen
+            if (data->ratings(user, item) != 0 || 
+                data->in_validation(user, item))
+                continue;
+
+            ratings.push_back(make_pair(predict(user,item), item));
+        }
+        
+        ratings.sort();
+        ratings.reverse();
+
+        int rank = 0;
+        while (!ratings.empty()) {
+            pair<double, int> pred_set = ratings.front();
+            fprintf(file, "%d\t%d\t%f\t%d\t%d\n", user, 
+                (int)pred_set.second, pred_set.first, ++rank, 
+                (int)data->test_ratings(user, pred_set.second));
+            ratings.pop_front();
+        }
+    }
+    fclose(file);
+}
+
+void SPF::evaluate_rankings() {
+    printf("computing evaluation metrics from rankings\n");
+    // compute eval metrics from ratings/rankings
+    FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "r");
+    FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
+    fprintf(user_file, "user.id\tnum.heldout\trmse\n");
+
+    // overall attributes to track
+    int user_count = 0;
+    int heldout_count = 0;
+
+    // overall metrics to track
+    double rmse = 0;
+    double user_sum_rmse = 0;
+
+    // per user attibutes
+    double user_rmse = 0;
+    int user_heldout = 0;
+        
+    // per line variables
+    int user, item, rating, rank;
+    double pred;
+    int prev_user = -1;
+    double local_rmse;
+
+    //fscanf(file, "%s\n");
+    while ((fscanf(file, "%d\t%d\t%lf\t%d\t%d\n", &user, &item, &pred, &rank,
+        &rating) != EOF)) {
+        if (user != prev_user) {
+            user_count++;
+            user_rmse = sqrt(user_rmse / user_heldout);
+            if (prev_user != -1)
+                log_user(user_file, user, user_heldout, user_rmse);
+
+            user_sum_rmse += user_rmse;
+            user_rmse = 0;
+
+            user_heldout = 0;
+            prev_user = user;
+        }
+        
+        // compute metrics only on held-out items
+        if (rating != 0) {
+            printf("\tuser:%d (item:%d)\trating:%d\tpred:%f\t%d [%d]\n", user, item, rating, pred, rank, user_heldout);
+            user_heldout++;
+            heldout_count++;
+
+            local_rmse = pow(rating - pred, 2);
+            rmse += local_rmse;
+            user_rmse += local_rmse;
+        }
+    }
+    log_user(user_file, user, user_heldout, user_rmse);
+
+    fclose(file);
+    fclose(user_file);
+
+
+    // write out results
+    file = fopen((settings->outdir+"/eval_summary.dat").c_str(), "w");
+    fprintf(file, "metric\tuser average\theldout pair average\n");
+    fprintf(file, "RMSE\t%f\t%f\n", user_rmse/user_count, 
+        sqrt(rmse/heldout_count));
+    fclose(file);
+}
 
 
 /* PRIVATE */
@@ -268,4 +379,8 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
     FILE* file = fopen((settings->outdir+"/log_likelihood.dat").c_str(), "a");
     fprintf(file, "%d\t%f\t%f\n", iteration, ave_ll, delta_ll);
     fclose(file);
+}
+
+void SPF::log_user(FILE* file, int user, int heldout, double rmse) {
+    fprintf(file, "%d\t%d\t%f\n", user, heldout, rmse);
 }

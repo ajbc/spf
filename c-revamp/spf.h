@@ -1,7 +1,7 @@
 #include <iostream>
 #include <armadillo>
 #include <gsl/gsl_rng.h>
-//#include <gsl/gsl_randist.h>
+#include <list>
 
 #include "utils.h"
 
@@ -152,10 +152,13 @@ class SPF {
 
         double get_ave_log_likelihood();
         void log_convergence(int iteration, double ave_ll, double delta_ll);
+        void log_user(FILE* file, int user, int heldout, double rmse);
 
         
     public:
         SPF(model_settings* model_set, Data* dataset);
         void learn();
         double predict(int user, int item);
+        void predict_and_rank();
+        void evaluate_rankings();
 };

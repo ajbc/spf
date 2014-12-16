@@ -289,11 +289,26 @@ int main(int argc, char* argv[]) {
     dataset->save_summary(out + "/data_stats.txt");
     printf("done\n");
 
-    // create model instance
+    // create model instance; learn!
     printf("\ncreating model instance\n");
     SPF *model = new SPF(&settings, dataset);
     printf("commencing model inference\n");
     model->learn();
+
+    // test the model fit TODO: make this optional (--test_only, --no_test)
+    printf("********************************************************************************\n");
+    printf("commencing model evaluation\n");
+    if (!file_exists(data + "/test.tsv")) {
+        printf("testing data file (test.tsv) doesn't exist!  Exiting.\n");
+        exit(-1);
+    }
+    printf("reading testing data\t\t...\t");
+    dataset->read_test(settings.datadir + "/test.tsv");
+    printf("done\n");
+    printf("predicting ratings and ranking results\n");
+    model->predict_and_rank();
+    printf("evaluating predictions and rankings\n");
+    model->evaluate_rankings();
     
     delete model;
     delete dataset;
