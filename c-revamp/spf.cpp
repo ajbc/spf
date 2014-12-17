@@ -101,7 +101,7 @@ double SPF::predict(int user, int item) {
     return prediction;
 }
  
-
+// helper function to sort predictions properly
 bool prediction_compare(const pair<pair<double,int>, int>& itemA, 
     const pair<pair<double, int>, int>& itemB) {
     // if the two values are equal, sort by popularity!
@@ -141,7 +141,6 @@ void SPF::predict_and_rank() {
         }
         
         ratings.sort(prediction_compare);
-        //ratings.reverse();
 
         int rank = 0;
         while (!ratings.empty()) {
