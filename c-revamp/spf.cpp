@@ -395,8 +395,8 @@ void SPF::save_parameters(string label) {
 }
 
 void SPF::update_shape(int user, int item, int rating) {
-    sp_mat phi_SF = tau.col(user) % data->ratings.col(item);
-    //sp_mat phi_SF = logtau.col(user) % data->ratings.col(item);
+    //sp_mat phi_SF = tau.col(user) % data->ratings.col(item);
+    sp_mat phi_SF = logtau.col(user) % data->ratings.col(item);
 
     double phi_sum = accu(phi_SF);
 
