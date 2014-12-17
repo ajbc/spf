@@ -27,6 +27,9 @@ void Data::read_ratings(string filename) {
         if (item_ids.count(item) == 0) {
             item_ids[item] = item_count() - 1;
             reverse_item_ids[item_ids[item]] = item;
+            item_popularity[item_ids[item]] = 1;
+        } else {
+            item_popularity[item_ids[item]] += 1;
         }
 
         if (rating != 0) {
@@ -226,6 +229,10 @@ int Data::user_id(int user) {
 
 int Data::item_id(int item) {
     return reverse_item_ids[item];
+}
+
+int Data::popularity(int item) {
+    return item_popularity[item];
 }
 
 // training data

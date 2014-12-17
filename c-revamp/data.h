@@ -24,6 +24,8 @@ class Data {
 
         vector<int>* network;
         vector<int>* user_items;
+
+        map<int,int> item_popularity;
         
         // training data
         vector<int> train_users;
@@ -64,6 +66,8 @@ class Data {
 
         int user_id(int user);
         int item_id(int item);
+
+        int popularity(int item);
     
         // training data
         int num_training();

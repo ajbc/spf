@@ -102,15 +102,23 @@ double SPF::predict(int user, int item) {
 }
  
 
-bool prediction_compare(const double* first, const double* second) {
-    return first[1] > second[1];
+bool prediction_compare(const pair<pair<double,int>, int>& itemA, 
+    const pair<pair<double, int>, int>& itemB) {
+    // if the two values are equal, sort by popularity!
+    if (itemA.first.first == itemB.first.first) {
+        if (itemA.first.second == itemB.first.second)
+            return itemA.second < itemB.second;
+        return itemA.first.second > itemB.first.second;
+    }
+    return itemA.first.first > itemB.first.first;
 }
+
 void SPF::predict_and_rank() {
     printf("predicting ratings and ranking items for each user\n");
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "w");
-    //fprintf(file, "user.map\tuser.id\titem\tpred\trank\trating\n");
+    //fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
     int user, item;
-    list<pair<double, int> > ratings;
+    list<pair<pair<double, int>, int> > ratings;
     for (set<int>::iterator iter_user = data->test_users.begin(); 
         iter_user != data->test_users.end();
         iter_user++){
@@ -128,17 +136,19 @@ void SPF::predict_and_rank() {
                 data->in_validation(user, item))
                 continue;
 
-            ratings.push_back(make_pair(predict(user,item), item));
+            ratings.push_back(make_pair(make_pair(predict(user,item), 
+                data->popularity(item)), item));
         }
         
-        ratings.sort();
-        ratings.reverse();
+        ratings.sort(prediction_compare);
+        //ratings.reverse();
 
         int rank = 0;
         while (!ratings.empty()) {
-            pair<double, int> pred_set = ratings.front();
-            fprintf(file, "%d\t%d\t%d\t%f\t%d\t%d\n", user, data->user_id(user),
-                (int)pred_set.second, pred_set.first, ++rank, 
+            pair<pair<double, int>, int> pred_set = ratings.front();
+            item = pred_set.first.first;
+            fprintf(file, "%d\t%d\t%d\t%d\t%f\t%d\t%d\n", user, data->user_id(user),
+                (int)pred_set.second, item, data->item_id(item), ++rank, 
                 (int)data->test_ratings(user, pred_set.second));
             ratings.pop_front();
         }
