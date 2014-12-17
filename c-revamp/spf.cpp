@@ -6,17 +6,19 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
 
     // user influence
     tau = sp_mat(data->user_count(), data->user_count());
-    //logtau = sp_mat(data->user_count(), data->user_count());
+    logtau = sp_mat(data->user_count(), data->user_count());
     a_tau = sp_mat(data->user_count(), data->user_count());
     b_tau = sp_mat(data->user_count(), data->user_count());
 
     // user preferences
     theta = mat(settings->k, data->user_count());
+    logtheta = mat(settings->k, data->user_count());
     a_theta = mat(settings->k, data->user_count());
     b_theta = mat(settings->k, data->user_count());
 
     // item attributes
     beta  = mat(settings->k, data->item_count());
+    logbeta  = mat(settings->k, data->item_count());
     a_beta  = mat(settings->k, data->item_count());
     b_beta  = mat(settings->k, data->item_count());
     
@@ -302,6 +304,7 @@ void SPF::initialize_parameters() {
             for (n = 0; n < data->neighbor_count(user); n++) {
                 neighbor = data->get_neighbor(user, n);
                 tau(neighbor, user) = 1.0;
+                logtau(neighbor, user) = log(1.0 + 1e-5);
 
                 double all = settings->b_tau;
                 for (i = 0; i < data->item_count(neighbor); i++) { 
@@ -320,16 +323,19 @@ void SPF::initialize_parameters() {
                 theta(k, user) = (settings->a_theta + 
                     gsl_rng_uniform_pos(rand_gen))
                     / (settings->b_theta);
+                logtheta(k, user) = log(theta(k, user));
             }
             theta.col(user) /= accu(theta.col(user));
         }
         
         // item attributes
         for (item = 0; item < data->item_count(); item++) {
-            for (k = 0; k < settings->k; k++)
+            for (k = 0; k < settings->k; k++) {
                 beta(k, item) = (settings->a_beta +
                     gsl_rng_uniform_pos(rand_gen))
                     / (settings->b_beta);
+                logbeta(k, item) = log(beta(k, item));
+            }
             beta.col(item) /= accu(beta.col(item));
         }
     }
@@ -390,6 +396,7 @@ void SPF::save_parameters(string label) {
 
 void SPF::update_shape(int user, int item, int rating) {
     sp_mat phi_SF = tau.col(user) % data->ratings.col(item);
+    //sp_mat phi_SF = logtau.col(user) % data->ratings.col(item);
 
     double phi_sum = accu(phi_SF);
 
@@ -397,7 +404,7 @@ void SPF::update_shape(int user, int item, int rating) {
     // we don't need to do a similar cheeck for factor only because
     // sparse matrices play nice when empty
     if (!settings->social_only) {
-        phi_MF = theta.col(user) % beta.col(item);
+        phi_MF = exp(logtheta.col(user) + logbeta.col(item));
         phi_sum += accu(phi_MF);
     }
 
@@ -423,9 +430,20 @@ void SPF::update_shape(int user, int item, int rating) {
 void SPF::update_MF() {
     b_theta.each_col() += sum(beta, 1);
     theta = a_theta / b_theta;
+    int user, item, k;
+    for (user = 0; user < data->user_count(); user++) {
+        for (k = 0; k < settings->k; k++)
+            logtheta(k, user) = gsl_sf_psi(a_theta(k, user));
+    }
+    logtheta = logtheta - log(b_theta);
     
     b_beta.each_col() += sum(theta, 1);
     beta  = a_beta  / b_beta;
+    for (item = 0; item < data->item_count(); item++) {
+        for (k = 0; k < settings->k; k++)
+            logbeta(k, item) = gsl_sf_psi(a_beta(k, item));
+    }
+    logbeta = logbeta - log(b_beta);
 }
 
 void SPF::update_SF() {
@@ -435,6 +453,8 @@ void SPF::update_SF() {
         for (n = 0; n < data->neighbor_count(user); n++) {
             neighbor = data->get_neighbor(user, n);
             tau(neighbor, user) = a_tau(neighbor, user) / b_tau(neighbor, user);
+            // fake log!
+            logtau(neighbor, user) = exp(gsl_sf_psi(a_tau(neighbor, user)) - log(b_tau(neighbor, user)));
         }
     }
 }

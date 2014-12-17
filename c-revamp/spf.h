@@ -1,6 +1,7 @@
 #include <iostream>
 #include <armadillo>
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_sf_psi.h>
 #include <list>
 
 #include "utils.h"
@@ -127,8 +128,12 @@ class SPF {
        
         // model parameters
         sp_mat tau; // user influence
+        sp_mat logtau; // fake "log" user influence
+                       // it's really exp(E[log(tau)]) which != E[tau]
         mat theta;  // user preferences
         mat beta;   // item attributes
+        mat logtheta;  // log variant of above
+        mat logbeta;   // ditto
 
         // helper parameters
         sp_mat a_tau;
