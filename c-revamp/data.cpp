@@ -89,8 +89,8 @@ void Data::read_network(string filename) {
         for (n = 0; n < neighbor_count(user); n++) {
             neighbor = get_neighbor(user, n);
 
-            locations(0, network_count) = user; // row
-            locations(1, network_count) = neighbor; // col
+            locations(0, network_count) = neighbor; // row
+            locations(1, network_count) = user; // col
             values(network_count) = 1;
             network_count++;
         }
