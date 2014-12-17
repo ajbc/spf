@@ -106,7 +106,7 @@ bool prediction_compare(const double* first, const double* second) {
 void SPF::predict_and_rank() {
     printf("predicting ratings and ranking items for each user\n");
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "w");
-    //fprintf(file, "user\titem\tpred\trank\trating\n");
+    //fprintf(file, "user.map\tuser.id\titem\tpred\trank\trating\n");
     int user, item;
     list<pair<double, int> > ratings;
     for (set<int>::iterator iter_user = data->test_users.begin(); 
@@ -135,7 +135,7 @@ void SPF::predict_and_rank() {
         int rank = 0;
         while (!ratings.empty()) {
             pair<double, int> pred_set = ratings.front();
-            fprintf(file, "%d\t%d\t%f\t%d\t%d\n", user, 
+            fprintf(file, "%d\t%d\t%d\t%f\t%d\t%d\n", user, data->user_id(user),
                 (int)pred_set.second, pred_set.first, ++rank, 
                 (int)data->test_ratings(user, pred_set.second));
             ratings.pop_front();
@@ -149,7 +149,7 @@ void SPF::evaluate_rankings() {
     // compute eval metrics from ratings/rankings
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "r");
     FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
-    fprintf(user_file, "user.id\tnum.heldout\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
+    fprintf(user_file, "user.map\tuser.id\tnum.heldout\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
 
     // overall attributes to track
     int user_count = 0;
@@ -181,14 +181,14 @@ void SPF::evaluate_rankings() {
     double user_ndcg_normalizer = 0;
         
     // per line variables
-    int user, item, rating, rank;
+    int user, uid, item, rating, rank;
     double pred;
     int prev_user = -1;
     double local_metric;
 
     //fscanf(file, "%s\n");
-    while ((fscanf(file, "%d\t%d\t%lf\t%d\t%d\n", &user, &item, &pred, &rank,
-        &rating) != EOF)) {
+    while ((fscanf(file, "%d\t%d\t%d\t%lf\t%d\t%d\n", &user, &uid, &item, &pred,
+        &rank, &rating) != EOF)) {
         if (user != prev_user) {
             if (prev_user != -1) {
                 user_rmse = sqrt(user_rmse / user_heldout);
@@ -464,6 +464,6 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
 
 void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
     double rank, int first, double crr, double ncrr, double ndcg) {
-    fprintf(file, "%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", 
-        user, heldout, rmse, mae, rank, first, crr, ncrr, ndcg);
+    fprintf(file, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
+        data->user_id(user), heldout, rmse, mae, rank, first, crr, ncrr, ndcg);
 }
