@@ -305,10 +305,8 @@ int main(int argc, char* argv[]) {
     printf("reading testing data\t\t...\t");
     dataset->read_test(settings.datadir + "/test.tsv");
     printf("done\n");
-    printf("predicting ratings and ranking results\n");
-    model->predict_and_rank();
-    printf("evaluating predictions and rankings\n");
-    model->evaluate_rankings();
+    printf("evaluating model on held-out data\n");
+    model->evaluate();
     
     delete model;
     delete dataset;

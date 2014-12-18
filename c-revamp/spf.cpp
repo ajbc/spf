@@ -113,59 +113,13 @@ bool prediction_compare(const pair<pair<double,int>, int>& itemA,
     return itemA.first.first > itemB.first.first;
 }
 
-void SPF::predict_and_rank() {
-    printf("predicting ratings and ranking items for each user\n");
+void SPF::evaluate() {
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "w");
-    //fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
-    int user, item;
-    list<pair<pair<double, int>, int> > ratings;
-    for (set<int>::iterator iter_user = data->test_users.begin(); 
-        iter_user != data->test_users.end();
-        iter_user++){
-
-        user = *iter_user;
-
-        for (set<int>::iterator iter_item = data->test_items.begin(); 
-            iter_item != data->test_items.end();
-            iter_item++){
-
-            item = *iter_item;
-
-            // don't rank items that we've already seen
-            if (data->ratings(user, item) != 0 || 
-                data->in_validation(user, item))
-                continue;
-
-            ratings.push_back(make_pair(make_pair(predict(user,item), 
-                data->popularity(item)), item));
-        }
-        
-        ratings.sort(prediction_compare);
-
-        int rank = 0;
-        while (!ratings.empty()) {
-            pair<pair<double, int>, int> pred_set = ratings.front();
-            item = pred_set.first.first;
-            fprintf(file, "%d\t%d\t%d\t%d\t%f\t%d\t%d\n", user, data->user_id(user),
-                (int)pred_set.second, item, data->item_id(item), ++rank, 
-                (int)data->test_ratings(user, pred_set.second));
-            ratings.pop_front();
-        }
-    }
-    fclose(file);
-}
-
-void SPF::evaluate_rankings() {
-    printf("computing evaluation metrics from rankings\n");
-    // compute eval metrics from ratings/rankings
-    FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "r");
+    fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
+    
     FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
     fprintf(user_file, "user.map\tuser.id\tnum.heldout\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
-
-    // overall attributes to track
-    int user_count = 0;
-    int heldout_count = 0;
-
+    
     // overall metrics to track
     double rmse = 0;
     double mae = 0;
@@ -190,100 +144,118 @@ void SPF::evaluate_rankings() {
     double user_ncrr_normalizer = 0;
     double user_ndcg = 0;
     double user_ndcg_normalizer = 0;
-        
-    // per line variables
-    int user, uid, item, rating, rank;
-    double pred;
-    int prev_user = -1;
+
+    // helper var for evaluation (used for mulitple metrics)
     double local_metric;
 
-    //fscanf(file, "%s\n");
-    while ((fscanf(file, "%d\t%d\t%d\t%lf\t%d\t%d\n", &user, &uid, &item, &pred,
-        &rank, &rating) != EOF)) {
-        if (user != prev_user) {
-            if (prev_user != -1) {
-                user_rmse = sqrt(user_rmse / user_heldout);
-                user_mae /= user_heldout;
-                user_rank /= user_heldout;
-                user_ncrr = user_crr / user_ncrr_normalizer;
-                user_ndcg /= user_ndcg_normalizer;
-                
-                log_user(user_file, prev_user, user_heldout, user_rmse, 
-                    user_mae, user_rank, first, user_crr, user_ncrr, user_ndcg);
-                user_sum_rmse += user_rmse;
-                user_sum_mae += user_mae;
-                user_sum_rank += user_rank;
-                user_sum_first += first;
-                user_sum_crr += user_crr;
-                user_sum_ncrr += user_ncrr;
-                user_sum_ndcg += user_ndcg;
-            }
+    // helper var to hold predicted rating
+    double pred;
+        
+    // overall attributes to track
+    int user_count = 0;
+    int heldout_count = 0;
+    
+    int user, item, rating, rank;
+    list<pair<pair<double, int>, int> > ratings;
+    for (set<int>::iterator iter_user = data->test_users.begin(); 
+        iter_user != data->test_users.end();
+        iter_user++){
 
-            user_count++;
-            user_rmse = 0;
-            user_mae = 0;
-            user_rank = 0;
-            first = 0;
-            user_crr = 0;
-            user_ncrr_normalizer = 0;
-            user_ndcg = 0;
-            user_ndcg_normalizer = 0;
+        user = *iter_user;
+        user_count++;
 
-            user_heldout = 0;
-            prev_user = user;
+        user_rmse = 0;
+        user_mae = 0;
+        user_rank = 0;
+        first = 0;
+        user_crr = 0;
+        user_ncrr_normalizer = 0;
+        user_ndcg = 0;
+        user_ndcg_normalizer = 0;
+        user_heldout = 0;
+
+        for (set<int>::iterator iter_item = data->test_items.begin(); 
+            iter_item != data->test_items.end();
+            iter_item++){
+
+            item = *iter_item;
+
+            // don't rank items that we've already seen
+            if (data->ratings(user, item) != 0 || 
+                data->in_validation(user, item))
+                continue;
+
+            ratings.push_back(make_pair(make_pair(predict(user,item), 
+                data->popularity(item)), item));
         }
         
-        // compute metrics only on held-out items
-        if (rating != 0) {
-            user_heldout++;
-            heldout_count++;
+        ratings.sort(prediction_compare);
 
-            local_metric = pow(rating - pred, 2);
-            rmse += local_metric;
-            user_rmse += local_metric;
+        rank = 0;
+        while (!ratings.empty()) {
+            pair<pair<double, int>, int> pred_set = ratings.front();
+            item = pred_set.second;
+            rating = data->test_ratings(user, pred_set.second);
+            pred = pred_set.first.first;
+            rank++;
+            if (rank <= 1000) { // TODO: make this threshold a command line arg
+                fprintf(file, "%d\t%d\t%d\t%d\t%f\t%d\t%d\n", user, data->user_id(user),
+                    item, data->item_id(item), pred, rank, rating);
+            }
+
+            // compute metrics only on held-out items
+            if (rating != 0) {
+                user_heldout++;
+                heldout_count++;
+
+                local_metric = pow(rating - pred, 2);
+                rmse += local_metric;
+                user_rmse += local_metric;
+                
+                local_metric = abs(rating - pred);
+                mae += local_metric;
+                user_mae += local_metric;
+
+                aggr_rank += rank;
+                user_rank += rank;
+
+                local_metric = 1.0 / rank;
+                user_crr += local_metric;
+                crr += local_metric;
+                user_ncrr_normalizer += 1.0 / user_heldout;
+
+                user_ndcg += rating / log(rank + 1);
+                user_ndcg_normalizer += rating / log(user_heldout + 1);
+
+                if (first == 0)
+                    first = rank;
+            }
             
-            local_metric = abs(rating - pred);
-            mae += local_metric;
-            user_mae += local_metric;
-
-            aggr_rank += rank;
-            user_rank += rank;
-
-            local_metric = 1.0 / rank;
-            user_crr += local_metric;
-            crr += local_metric;
-            user_ncrr_normalizer += 1.0 / user_heldout;
-
-            user_ndcg += rating / log(rank + 1);
-            user_ndcg_normalizer += rating / log(user_heldout + 1);
-
-            if (first == 0)
-                first = rank;
+            ratings.pop_front();
         }
+
+        // log this user's metrics
+        user_rmse = sqrt(user_rmse / user_heldout);
+        user_mae /= user_heldout;
+        user_rank /= user_heldout;
+        user_ncrr = user_crr / user_ncrr_normalizer;
+        user_ndcg /= user_ndcg_normalizer;
+        
+        log_user(user_file, user, user_heldout, user_rmse, 
+            user_mae, user_rank, first, user_crr, user_ncrr, user_ndcg);
+
+        // add this user's metrics to overall metrics
+        user_sum_rmse += user_rmse;
+        user_sum_mae += user_mae;
+        user_sum_rank += user_rank;
+        user_sum_first += first;
+        user_sum_crr += user_crr;
+        user_sum_ncrr += user_ncrr;
+        user_sum_ndcg += user_ndcg;
     }
-    // log the last user
-    user_rmse = sqrt(user_rmse / user_heldout);
-    user_mae /= user_heldout;
-    user_rank /= user_heldout;
-    user_ncrr = user_crr / user_ncrr_normalizer;
-    user_ndcg /= user_ndcg_normalizer;
-    log_user(user_file, user, user_heldout, user_rmse, user_mae, user_rank,
-        first, user_crr, user_ncrr, user_ndcg);
-    // aggregate metrics
-    user_sum_rmse += user_rmse;
-    user_sum_mae += user_mae;
-    user_sum_rank += user_rank;
-    user_sum_first += first;
-    user_sum_crr += user_crr;
-    user_sum_ncrr += user_ncrr;
-    user_sum_ndcg += user_ndcg;
-
-    user_count++;
-
     fclose(file);
     fclose(user_file);
-
-
+    
     // write out results
     file = fopen((settings->outdir+"/eval_summary.dat").c_str(), "w");
     fprintf(file, "metric\tuser average\theldout pair average\n");
@@ -296,11 +268,9 @@ void SPF::evaluate_rankings() {
     fprintf(file, "CRR\t%f\t%f\n", user_sum_crr/user_count, crr/heldout_count);
     fprintf(file, "NCRR\t%f\t---\n", user_sum_ncrr/user_count);
     fprintf(file, "NDCG\t%f\t---\n", user_sum_ndcg/user_count);
-    //fprintf(file, "prec@1\t%f\t---\n", user_sum_p1/user_count);
-    //fprintf(file, "prec@10\t%f\t---\n", user_sum_p10/user_count);
-    //fprintf(file, "prec@100\t%f\t---\n", user_sum_p100/user_count);
     fclose(file);
 }
+
 
 
 /* PRIVATE */

@@ -166,6 +166,5 @@ class SPF {
         SPF(model_settings* model_set, Data* dataset);
         void learn();
         double predict(int user, int item);
-        void predict_and_rank();
-        void evaluate_rankings();
+        void evaluate();
 };
