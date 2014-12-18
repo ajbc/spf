@@ -118,7 +118,7 @@ void SPF::evaluate() {
     fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
     
     FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
-    fprintf(user_file, "user.map\tuser.id\tnum.heldout\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
+    fprintf(user_file, "user.map\tuser.id\tnum.heldout\tnum.train\tdegree\tconnectivity\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
     
     // overall metrics to track
     double rmse = 0;
@@ -463,6 +463,8 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
 
 void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
     double rank, int first, double crr, double ncrr, double ndcg) {
-    fprintf(file, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
-        data->user_id(user), heldout, rmse, mae, rank, first, crr, ncrr, ndcg);
+    fprintf(file, "%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
+        data->user_id(user), heldout, data->item_count(user), 
+        data->neighbor_count(user), data->connectivity(user), 
+        rmse, mae, rank, first, crr, ncrr, ndcg);
 }

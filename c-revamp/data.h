@@ -58,6 +58,8 @@ class Data {
 
         int neighbor_count(int user);
         int get_neighbor(int user, int n);
+
+        int connectivity(int user);
         
         int item_count(int user);
         int get_item(int user, int i);

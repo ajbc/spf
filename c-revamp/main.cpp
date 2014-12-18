@@ -178,7 +178,10 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
     
-    if (dir_exists(out)) remove_directory(out);
+    if (dir_exists(out)) {
+        string rmout = "rm -rf " + out;
+        system(rmout.c_str());
+    }
     make_directory(out);
     printf("output directory: %s\n", out.c_str());
     

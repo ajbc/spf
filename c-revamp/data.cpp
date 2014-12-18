@@ -215,6 +215,18 @@ int Data::get_neighbor(int user, int n) {
     return network[user][n];
 }
 
+int Data::connectivity(int user) {
+    int connections = 0;
+    int i, j;
+    for (i = 0; i < network[user].size(); i++) {
+        for (j = 0; j < network[user].size(); j++) {
+            if (has_connection(network[user][i], network[user][j]))
+                connections++;
+        }
+    }
+    return connections;
+}
+
 int Data::item_count(int user) {
     return user_items[user].size();
 }
