@@ -57,6 +57,7 @@ void SPF::learn() {
         if (!settings->factor_only)
             update_SF();
 
+        log_params(iteration, delta_tau, delta_theta);
         if (iteration % settings->save_lag == 0) {
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
@@ -68,7 +69,6 @@ void SPF::learn() {
             delta_likelihood = abs((old_likelihood - likelihood) / 
                 old_likelihood);
             log_convergence(iteration, likelihood, delta_likelihood);
-            //void SPF::log_params(int iteration, double tau_change, double theta_change) {
             printf("delta: %f\n", delta_likelihood);
             printf("old:   %f\n", old_likelihood);
             printf("new:   %f\n", likelihood);
@@ -422,7 +422,10 @@ void SPF::update_shape(int user, int item, int rating) {
 
 void SPF::update_MF() {
     b_theta.each_col() += sum(beta, 1);
-    theta = a_theta / b_theta;
+    mat new_theta = a_theta / b_theta; 
+    delta_theta = accu(abs(theta - new_theta)) / 
+        (data->user_count() * settings->k);
+    theta = new_theta;
     int user, item, k;
     for (user = 0; user < data->user_count(); user++) {
         for (k = 0; k < settings->k; k++)
@@ -442,14 +445,23 @@ void SPF::update_MF() {
 void SPF::update_SF() {
     int user, neighbor, n;
     double a, b, c;
+    delta_tau = 0;
+    int tau_count = 0;
+    double new_tau;
     for (user = 0; user < data->user_count(); user++) {
         for (n = 0; n < data->neighbor_count(user); n++) {
             neighbor = data->get_neighbor(user, n);
-            tau(neighbor, user) = a_tau(neighbor, user) / b_tau(neighbor, user);
+            
+            new_tau = a_tau(neighbor, user) / b_tau(neighbor, user);
+            delta_tau += abs(tau(neighbor, user) - new_tau);
+            tau_count++;
+            
+            tau(neighbor, user) = new_tau;
             // fake log!
             logtau(neighbor, user) = exp(gsl_sf_psi(a_tau(neighbor, user)) - log(b_tau(neighbor, user)));
         }
     }
+    delta_tau /= tau_count;
 }
 
 double SPF::get_ave_log_likelihood() {
@@ -483,7 +495,7 @@ void SPF::log_time(int iteration, double duration) {
 
 void SPF::log_params(int iteration, double tau_change, double theta_change) {
     FILE* file = fopen((settings->outdir+"/param_log.dat").c_str(), "a");
-    fprintf(file, "%d\t%f\t%d\n", iteration, tau_change, theta_change);
+    fprintf(file, "%d\t%e\t%e\n", iteration, tau_change, theta_change);
     fclose(file);
 }
 

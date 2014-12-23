@@ -162,6 +162,10 @@ class SPF {
         void log_user(FILE* file, int user, int heldout, double rmse, 
             double mae, double rank, int first, double crr, double ncrr,
             double ndcg);
+    
+        // track changes in parameters for logs
+        double delta_theta;
+        double delta_tau;
 
         
     public:
