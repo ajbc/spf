@@ -31,11 +31,13 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
 void SPF::learn() {
     double old_likelihood, delta_likelihood, likelihood = -1e10; 
     int likelihood_decreasing_count = 0;
+    time_t start_time, end_time;
     
     int iteration = 0;
     char iter_as_str[4];
     bool converged = false;
     while (!converged) {
+        time(&start_time);
         iteration++;
         printf("iteration %d\n", iteration);
         
@@ -66,6 +68,7 @@ void SPF::learn() {
             delta_likelihood = abs((old_likelihood - likelihood) / 
                 old_likelihood);
             log_convergence(iteration, likelihood, delta_likelihood);
+            //void SPF::log_params(int iteration, double tau_change, double theta_change) {
             printf("delta: %f\n", delta_likelihood);
             printf("old:   %f\n", old_likelihood);
             printf("new:   %f\n", likelihood);
@@ -86,6 +89,8 @@ void SPF::learn() {
                 save_parameters(iter_as_str);
             }
         }
+        time(&end_time);
+        log_time(iteration, difftime(end_time, start_time));
     }
     
     save_parameters("final");
@@ -114,6 +119,9 @@ bool prediction_compare(const pair<pair<double,int>, int>& itemA,
 }
 
 void SPF::evaluate() {
+    time_t start_time, end_time;
+    time(&start_time);
+    
     FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "w");
     fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
     
@@ -157,6 +165,7 @@ void SPF::evaluate() {
     
     int user, item, rating, rank;
     list<pair<pair<double, int>, int> > ratings;
+    int total_pred = 0;
     for (set<int>::iterator iter_user = data->test_users.begin(); 
         iter_user != data->test_users.end();
         iter_user++){
@@ -184,6 +193,8 @@ void SPF::evaluate() {
             if (data->ratings(user, item) != 0 || 
                 data->in_validation(user, item))
                 continue;
+
+            total_pred++;
 
             ratings.push_back(make_pair(make_pair(predict(user,item), 
                 data->popularity(item)), item));
@@ -269,6 +280,9 @@ void SPF::evaluate() {
     fprintf(file, "NCRR\t%f\t---\n", user_sum_ncrr/user_count);
     fprintf(file, "NDCG\t%f\t---\n", user_sum_ndcg/user_count);
     fclose(file);
+    
+    time(&end_time);
+    log_time(total_pred, difftime(end_time, start_time));
 }
 
 
@@ -458,6 +472,18 @@ double SPF::get_ave_log_likelihood() {
 void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
     FILE* file = fopen((settings->outdir+"/log_likelihood.dat").c_str(), "a");
     fprintf(file, "%d\t%f\t%f\n", iteration, ave_ll, delta_ll);
+    fclose(file);
+}
+
+void SPF::log_time(int iteration, double duration) {
+    FILE* file = fopen((settings->outdir+"/time_log.dat").c_str(), "a");
+    fprintf(file, "%d\t%.f\n", iteration, duration);
+    fclose(file);
+}
+
+void SPF::log_params(int iteration, double tau_change, double theta_change) {
+    FILE* file = fopen((settings->outdir+"/param_log.dat").c_str(), "a");
+    fprintf(file, "%d\t%f\t%d\n", iteration, tau_change, theta_change);
     fclose(file);
 }
 
