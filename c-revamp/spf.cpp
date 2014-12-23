@@ -26,6 +26,10 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     gsl_rng_set(rand_gen, (long) settings->seed); // init the seed
     
     initialize_parameters(); 
+
+    // initize these to 0 for when they're never set (social only, factor only)
+    delta_theta = 0;
+    delta_tau = 0;
 }
 
 void SPF::learn() {
@@ -166,6 +170,7 @@ void SPF::evaluate() {
     int user, item, rating, rank;
     list<pair<pair<double, int>, int> > ratings;
     int total_pred = 0;
+    
     for (set<int>::iterator iter_user = data->test_users.begin(); 
         iter_user != data->test_users.end();
         iter_user++){
@@ -266,6 +271,7 @@ void SPF::evaluate() {
     }
     fclose(file);
     fclose(user_file);
+    
     
     // write out results
     file = fopen((settings->outdir+"/eval_summary.dat").c_str(), "w");
@@ -501,8 +507,15 @@ void SPF::log_params(int iteration, double tau_change, double theta_change) {
 
 void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
     double rank, int first, double crr, double ncrr, double ndcg) {
-    fprintf(file, "%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
-        data->user_id(user), heldout, data->item_count(user), 
-        data->neighbor_count(user), data->connectivity(user), 
-        rmse, mae, rank, first, crr, ncrr, ndcg);
+    if (settings->factor_only) {
+        fprintf(file, "%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
+            data->user_id(user), heldout, data->item_count(user), 
+            rmse, mae, rank, first, crr, ncrr, ndcg);
+    
+    } else {
+        fprintf(file, "%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
+            data->user_id(user), heldout, data->item_count(user), 
+            data->neighbor_count(user), data->connectivity(user), 
+            rmse, mae, rank, first, crr, ncrr, ndcg);
+    }
 }
