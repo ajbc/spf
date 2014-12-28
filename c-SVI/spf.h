@@ -28,6 +28,7 @@ struct model_settings {
     
     long   seed;
     int    save_lag;
+    int    sample_size;
     int    max_iter;
     int    min_iter;
     double likelihood_delta;
@@ -39,8 +40,8 @@ struct model_settings {
              double athe, double bthe, double abet, double bbet, 
              double atau, double btau,
              bool social, bool factor, bool bin, bool dir,
-             long rand, int lag, int iter_max, int iter_min, double delta,
-             int num_factors) {
+             long rand, int lag, int sample, int iter_max, int iter_min, 
+             double delta, int num_factors) {
         outdir = out;
         datadir = data;
         
@@ -58,6 +59,7 @@ struct model_settings {
 
         seed = rand;
         save_lag = lag;
+        sample_size = sample;
         max_iter = iter_max;
         min_iter = iter_min;
         likelihood_delta = delta;
@@ -113,6 +115,7 @@ struct model_settings {
         fprintf(file, "\ninference parameters:\n");
         fprintf(file, "\tseed:                                     %d\n", (int)seed);
         fprintf(file, "\tsave lag:                                 %d\n", save_lag);
+        fprintf(file, "\tsample size:                              %d\n", sample_size);
         fprintf(file, "\tmaximum number of iterations:             %d\n", max_iter);
         fprintf(file, "\tminimum number of iterations:             %d\n", min_iter);
         fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);

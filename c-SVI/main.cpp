@@ -41,6 +41,7 @@ void print_usage_and_exit() {
     printf("\n");
     printf("  --seed {seed}     the random seed, default from time\n");
     printf("  --save_lag {lag}  the saving frequency, default 20\n                    -1 means no savings for intermediate results\n");
+    printf("  --sample {size}   the sample size, default 1000\n");
     printf("  --max_iter {max}  the max number of iterations, default 300\n");
     printf("  --min_iter {min}  the min number of iterations, default 30\n");
     printf("  --converge {c}    the change in log likelihood required for convergence\n                    default 1e-6\n");
@@ -78,6 +79,7 @@ int main(int argc, char* argv[]) {
     time_t t; time(&t);
     long   seed = (long) t;
     int    save_lag = 20;
+    int    sample_size = 1000;
     int    max_iter = 300;
     int    min_iter = 30;
     double converge_delta = 1e-6;
@@ -85,7 +87,7 @@ int main(int argc, char* argv[]) {
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "ho:d:1:2:3:4:5:6:s:l:x:m:c:k:";
+    const char* const short_options = "ho:d:1:2:3:4:5:6:s:l:a:x:m:c:k:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
         {"out",             required_argument, NULL, 'o'},
@@ -102,6 +104,7 @@ int main(int argc, char* argv[]) {
         {"directed",        no_argument, &directed, 1},
         {"seed",            required_argument, NULL, 's'},
         {"save_lag",        required_argument, NULL, 'l'},
+        {"sample",          required_argument, NULL, 'a'},
         {"max_iter",        required_argument, NULL, 'x'},
         {"min_iter",        required_argument, NULL, 'm'},
         {"converge",        required_argument, NULL, 'c'},
@@ -145,6 +148,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'l':
                 save_lag = atoi(optarg);
+                break;
+            case 'a':
+                sample_size = atoi(optarg);
                 break;
             case 'x':
                 max_iter =  atoi(optarg);
@@ -260,6 +266,7 @@ int main(int argc, char* argv[]) {
     printf("\ninference parameters:\n");
     printf("\tseed:                                     %d\n", (int)seed);
     printf("\tsave lag:                                 %d\n", save_lag);
+    printf("\tsample size:                              %d\n", sample_size);
     printf("\tmaximum number of iterations:             %d\n", max_iter);
     printf("\tminimum number of iterations:             %d\n", min_iter);
     printf("\tchange in log likelihood for convergence: %f\n", converge_delta);
@@ -270,7 +277,7 @@ int main(int argc, char* argv[]) {
     model_settings settings;
     settings.set(out, data, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
-        seed, save_lag, max_iter, min_iter, converge_delta, k);
+        seed, save_lag, sample_size, max_iter, min_iter, converge_delta, k);
     settings.save(out + "/settings.txt");
 
     // read in the data
