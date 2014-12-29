@@ -30,7 +30,7 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     gsl_rng_set(rand_gen, (long) settings->seed); // init the seed
     
     initialize_parameters(); 
-    scale = data->num_training() / settings->sample_size;
+    scale = data->num_training() / data->user_count();
 }
 
 void SPF::learn() {
