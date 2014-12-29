@@ -29,6 +29,8 @@ struct model_settings {
     long   seed;
     int    save_lag;
     int    sample_size;
+    double svi_delay;
+    double svi_forget;
     int    max_iter;
     int    min_iter;
     double likelihood_delta;
@@ -40,8 +42,8 @@ struct model_settings {
              double athe, double bthe, double abet, double bbet, 
              double atau, double btau,
              bool social, bool factor, bool bin, bool dir,
-             long rand, int lag, int sample, int iter_max, int iter_min, 
-             double delta, int num_factors) {
+             long rand, int lag, int sample, double delay, double forget,
+             int iter_max, int iter_min, double delta, int num_factors) {
         outdir = out;
         datadir = data;
         
@@ -60,6 +62,8 @@ struct model_settings {
         seed = rand;
         save_lag = lag;
         sample_size = sample;
+        svi_delay = delay;
+        svi_forget = forget;
         max_iter = iter_max;
         min_iter = iter_min;
         likelihood_delta = delta;
@@ -116,6 +120,8 @@ struct model_settings {
         fprintf(file, "\tseed:                                     %d\n", (int)seed);
         fprintf(file, "\tsave lag:                                 %d\n", save_lag);
         fprintf(file, "\tsample size:                              %d\n", sample_size);
+        fprintf(file, "\tSVI delay (tau):                          %f\n", svi_delay);
+        fprintf(file, "\tSVI forgetting rate (kappa):              %f\n", svi_forget);
         fprintf(file, "\tmaximum number of iterations:             %d\n", max_iter);
         fprintf(file, "\tminimum number of iterations:             %d\n", min_iter);
         fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);
@@ -144,6 +150,7 @@ class SPF {
         mat a_theta;
         mat b_theta;
         mat a_beta;
+        mat a_beta_old;
         mat b_beta;
     
         // random number generator
@@ -155,8 +162,9 @@ class SPF {
     
         // parameter updates
         void update_shape(int user, int item, int rating);
-        void update_MF();
-        void update_SF();
+        void update_tau(int user);
+        void update_theta(int user);
+        void update_beta(int item);
 
         double get_ave_log_likelihood();
         void log_convergence(int iteration, double ave_ll, double delta_ll);
@@ -165,11 +173,12 @@ class SPF {
         void log_user(FILE* file, int user, int heldout, double rmse, 
             double mae, double rank, int first, double crr, double ncrr,
             double ndcg);
-    
-        // track changes in parameters for logs
-        double delta_theta;
-        double delta_tau;
+   
+        // define how to scale updates (training / sample size)
+        double scale; 
 
+        // counts of number of times an item has been seen in a sample
+        map<int,int> iter_count;
         
     public:
         SPF(model_settings* model_set, Data* dataset);

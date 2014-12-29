@@ -22,14 +22,15 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     a_beta  = mat(settings->k, data->item_count());
     b_beta  = mat(settings->k, data->item_count());
     
+    // keep track of old a_beta for SVI
+    a_beta_old  = mat(settings->k, data->item_count());
+    a_beta_old.fill(settings->a_beta);
+    
     rand_gen = gsl_rng_alloc(gsl_rng_taus);
     gsl_rng_set(rand_gen, (long) settings->seed); // init the seed
     
     initialize_parameters(); 
-
-    // initize these to 0 for when they're never set (social only, factor only)
-    delta_theta = 0;
-    delta_tau = 0;
+    scale = data->num_training() / settings->sample_size;
 }
 
 void SPF::learn() {
@@ -40,28 +41,52 @@ void SPF::learn() {
     int iteration = 0;
     char iter_as_str[4];
     bool converged = false;
+
     while (!converged) {
         time(&start_time);
         iteration++;
         printf("iteration %d\n", iteration);
         
         reset_helper_params();
-
-        int user, item, rating;
-        for (int i = 0; i < data->num_training(); i++) {
-            user = data->get_train_user(i);
-            item = data->get_train_item(i);
-            rating = data->get_train_rating(i);
-            update_shape(user, item, rating);
-        }
-    
-        if (!settings->social_only)
-            update_MF();
         
-        if (!settings->factor_only)
-            update_SF();
+        // update rate for user preferences
+        b_theta.each_col() += sum(beta, 1);
+        
+        // sample users
+        int user, item, rating;
+        set<int> items;
+        for (int i = 0; i < settings->sample_size; i++) {
+            user = gsl_rng_uniform_int(rand_gen, data->user_count());
+            
+            // look at all the user's items
+            for (int j = 0; j < data->item_count(user); j++) {
+                item = data->get_item(user, j);
+                items.insert(item);
+                rating = 1;
+                //TODO: rating = data->get_train_rating(i);
+                update_shape(user, item, rating);
+            }
 
-        log_params(iteration, delta_tau, delta_theta);
+            // update per-user parameters
+            if (!settings->factor_only)
+                update_tau(user);
+            if (!settings->social_only)
+                update_theta(user);
+        }
+   
+        if (!settings->social_only) {
+            // update rate for item attributes
+            b_beta.each_col() += sum(theta, 1);
+
+            // update per-item parameters
+            if (iter_count[item] == 0)
+                iter_count[item] = 0;
+            iter_count[item]++;
+            set<int>::iterator it;
+            for (it = items.begin(); it != items.end(); it++)
+                update_beta(*it);
+        }
+
         if (iteration % settings->save_lag == 0) {
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
@@ -394,13 +419,12 @@ void SPF::save_parameters(string label) {
 }
 
 void SPF::update_shape(int user, int item, int rating) {
-    //sp_mat phi_SF = tau.col(user) % data->ratings.col(item);
     sp_mat phi_SF = logtau.col(user) % data->ratings.col(item);
 
     double phi_sum = accu(phi_SF);
 
     mat phi_MF;
-    // we don't need to do a similar cheeck for factor only because
+    // we don't need to do a similar check for factor only because
     // sparse matrices play nice when empty
     if (!settings->social_only) {
         phi_MF = exp(logtheta.col(user) + logbeta.col(item));
@@ -421,53 +445,40 @@ void SPF::update_shape(int user, int item, int rating) {
 
     if (!settings->social_only) {
         phi_MF /= phi_sum * rating;
-        a_theta.col(user) += phi_MF;        
-        a_beta.col(item)  += phi_MF;        
+        a_theta.col(user) += phi_MF;
+        a_beta.col(item)  += phi_MF * scale;
     }
 }
 
-void SPF::update_MF() {
-    b_theta.each_col() += sum(beta, 1);
-    mat new_theta = a_theta / b_theta; 
-    delta_theta = accu(abs(theta - new_theta)) / 
-        (data->user_count() * settings->k);
-    theta = new_theta;
-    int user, item, k;
-    for (user = 0; user < data->user_count(); user++) {
-        for (k = 0; k < settings->k; k++)
-            logtheta(k, user) = gsl_sf_psi(a_theta(k, user));
-    }
-    logtheta = logtheta - log(b_theta);
+void SPF::update_theta(int user) {
+    theta(user) = a_theta(user) / b_theta(user);
+    for (int k = 0; k < settings->k; k++)
+        logtheta(k, user) = gsl_sf_psi(a_theta(k, user));
+    logtheta(user) = logtheta(user) - log(b_theta(user));
+}
+
+void SPF::update_beta(int item) {
+    double rho = pow(iter_count[item] + settings->svi_delay, 
+        -1 * settings->svi_forget);
+    a_beta(item) = (1 - rho) * a_beta_old(item) + rho * a_beta(item);
+    a_beta_old(item) = a_beta(item);
+    beta(item)  = a_beta(item) / b_beta(item);
     
-    b_beta.each_col() += sum(theta, 1);
-    beta  = a_beta  / b_beta;
-    for (item = 0; item < data->item_count(); item++) {
-        for (k = 0; k < settings->k; k++)
-            logbeta(k, item) = gsl_sf_psi(a_beta(k, item));
-    }
-    logbeta = logbeta - log(b_beta);
+    for (int k = 0; k < settings->k; k++)
+        logbeta(k, item) = gsl_sf_psi(a_beta(k, item));
+    
+    logbeta(item) = logbeta(item) - log(b_beta(item));
 }
 
-void SPF::update_SF() {
-    int user, neighbor, n;
-    double a, b, c;
-    delta_tau = 0;
-    int tau_count = 0;
-    double new_tau;
-    for (user = 0; user < data->user_count(); user++) {
-        for (n = 0; n < data->neighbor_count(user); n++) {
-            neighbor = data->get_neighbor(user, n);
-            
-            new_tau = a_tau(neighbor, user) / b_tau(neighbor, user);
-            delta_tau += abs(tau(neighbor, user) - new_tau);
-            tau_count++;
-            
-            tau(neighbor, user) = new_tau;
-            // fake log!
-            logtau(neighbor, user) = exp(gsl_sf_psi(a_tau(neighbor, user)) - log(b_tau(neighbor, user)));
-        }
+void SPF::update_tau(int user) {
+    int neighbor, n;
+    for (n = 0; n < data->neighbor_count(user); n++) {
+        neighbor = data->get_neighbor(user, n);
+        
+        tau(neighbor, user) = a_tau(neighbor, user) / b_tau(neighbor, user);
+        // fake log!
+        logtau(neighbor, user) = exp(gsl_sf_psi(a_tau(neighbor, user)) - log(b_tau(neighbor, user)));
     }
-    delta_tau /= tau_count;
 }
 
 double SPF::get_ave_log_likelihood() {
@@ -496,12 +507,6 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
 void SPF::log_time(int iteration, double duration) {
     FILE* file = fopen((settings->outdir+"/time_log.dat").c_str(), "a");
     fprintf(file, "%d\t%.f\n", iteration, duration);
-    fclose(file);
-}
-
-void SPF::log_params(int iteration, double tau_change, double theta_change) {
-    FILE* file = fopen((settings->outdir+"/param_log.dat").c_str(), "a");
-    fprintf(file, "%d\t%e\t%e\n", iteration, tau_change, theta_change);
     fclose(file);
 }
 
