@@ -46,7 +46,7 @@ void print_usage_and_exit() {
     printf("  --svi_forget {k}  SVI forgetting rate (0.5,1], default 0.75\n");
     printf("  --max_iter {max}  the max number of iterations, default 300\n");
     printf("  --min_iter {min}  the min number of iterations, default 30\n");
-    printf("  --converge {c}    the change in log likelihood required for convergence\n                    default 1e-6\n");
+    printf("  --converge {c}    the change in log likelihood required for convergence\n                    default 1e-6; this value then is * sample size / # users\n");
     printf("\n");
 
     printf("  --K {K}           the number of general factors, default 100\n");
@@ -301,6 +301,7 @@ int main(int argc, char* argv[]) {
     Data *dataset = new Data(settings.binary, settings.directed);
     printf("\treading training data\t\t...\t");
     dataset->read_ratings(settings.datadir + "/train.tsv");
+    settings.modify_convergence(dataset->user_count());
     printf("done\n");
     if (!factor_only) {
         printf("\treading network data\t\t...\t");

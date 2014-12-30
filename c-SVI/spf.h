@@ -71,6 +71,11 @@ struct model_settings {
         k = num_factors;
     }
 
+    void modify_convergence(int user_count) {
+       likelihood_delta *= sample_size;
+       likelihood_delta /= user_count; 
+    }
+
     void save(string filename) {
         FILE* file = fopen(filename.c_str(), "w");
         
