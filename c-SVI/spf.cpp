@@ -79,12 +79,14 @@ void SPF::learn() {
             b_beta.each_col() += sum(theta, 1);
 
             // update per-item parameters
-            if (iter_count[item] == 0)
-                iter_count[item] = 0;
-            iter_count[item]++;
             set<int>::iterator it;
-            for (it = items.begin(); it != items.end(); it++)
+            for (it = items.begin(); it != items.end(); it++) {
+                item = *it;
+                if (iter_count[item] == 0)
+                    iter_count[item] = 0;
+                iter_count[item]++;
                 update_beta(*it);
+            }
         }
 
         if (iteration % settings->save_lag == 0) {
@@ -121,6 +123,7 @@ void SPF::learn() {
         time(&end_time);
         log_time(iteration, difftime(end_time, start_time));
     }
+
     
     save_parameters("final");
 }
