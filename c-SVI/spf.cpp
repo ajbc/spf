@@ -41,11 +41,12 @@ void SPF::learn() {
     int iteration = 0;
     char iter_as_str[4];
     bool converged = false;
+    set<int>::iterator it;
 
+    int user, item, rating;
     while (!converged) {
         time(&start_time);
-        iteration++;
-        printf("iteration %d\n", iteration);
+        printf("iteration %d\n", ++iteration);
         
         reset_helper_params();
         
@@ -53,7 +54,6 @@ void SPF::learn() {
         b_theta.each_col() += sum(beta, 1);
         
         // sample users
-        int user, item, rating;
         set<int> items;
         for (int i = 0; i < settings->sample_size; i++) {
             user = gsl_rng_uniform_int(rand_gen, data->user_count());
@@ -79,13 +79,12 @@ void SPF::learn() {
             b_beta.each_col() += sum(theta, 1);
 
             // update per-item parameters
-            set<int>::iterator it;
             for (it = items.begin(); it != items.end(); it++) {
                 item = *it;
                 if (iter_count[item] == 0)
                     iter_count[item] = 0;
                 iter_count[item]++;
-                update_beta(*it);
+                update_beta(item);
             }
         }
 
@@ -124,6 +123,44 @@ void SPF::learn() {
         log_time(iteration, difftime(end_time, start_time));
     }
 
+    b_theta.each_col() += sum(beta, 1);
+    printf("final pass on all users (iteration %d)\n", ++iteration);
+    time(&start_time);
+    reset_helper_params();
+    for (it = data->users.begin(); it != data->users.end(); it++) {
+        user = *it;
+        
+        // look at all the user's items
+        for (int j = 0; j < data->item_count(user); j++) {
+            item = data->get_item(user, j);
+            rating = 1;
+            //TODO: rating = data->get_train_rating(i);
+            update_shape(user, item, rating, false);
+        }
+
+        // update per-user parameters
+        if (!settings->factor_only)
+            update_tau(user);
+        if (!settings->social_only)
+            update_theta(user);
+    }
+
+    if (!settings->social_only) {
+        // update rate for item attributes
+        b_beta.each_col() += sum(theta, 1);
+
+        // update per-item parameters
+        for (it = data->items.begin(); it != data->items.end(); it++) {
+            item = *it;
+            if (iter_count[item] == 0)
+                iter_count[item] = 0;
+            iter_count[item]++;
+            update_beta(item, false);
+        }
+    }
+
+    time(&end_time);
+    log_time(iteration, difftime(end_time, start_time));
     
     save_parameters("final");
 }
@@ -422,6 +459,10 @@ void SPF::save_parameters(string label) {
 }
 
 void SPF::update_shape(int user, int item, int rating) {
+    update_shape(user, item, rating, true);
+}
+
+void SPF::update_shape(int user, int item, int rating, bool sampled) {
     sp_mat phi_SF = logtau.col(user) % data->ratings.col(item);
 
     double phi_sum = accu(phi_SF);
@@ -449,7 +490,10 @@ void SPF::update_shape(int user, int item, int rating) {
     if (!settings->social_only) {
         phi_MF /= phi_sum * rating;
         a_theta.col(user) += phi_MF;
-        a_beta.col(item)  += phi_MF * scale;
+        if (sampled)
+            a_beta.col(item) += phi_MF * scale;
+        else
+            a_beta.col(item) += phi_MF;
     }
 }
 
@@ -461,10 +505,16 @@ void SPF::update_theta(int user) {
 }
 
 void SPF::update_beta(int item) {
-    double rho = pow(iter_count[item] + settings->svi_delay, 
-        -1 * settings->svi_forget);
-    a_beta(item) = (1 - rho) * a_beta_old(item) + rho * a_beta(item);
-    a_beta_old(item) = a_beta(item);
+    update_beta(item, true);
+}
+
+void SPF::update_beta(int item, bool sampled) {
+    if (sampled) {
+        double rho = pow(iter_count[item] + settings->svi_delay, 
+            -1 * settings->svi_forget);
+        a_beta(item) = (1 - rho) * a_beta_old(item) + rho * a_beta(item);
+        a_beta_old(item) = a_beta(item);
+    }
     beta(item)  = a_beta(item) / b_beta(item);
     
     for (int k = 0; k < settings->k; k++)

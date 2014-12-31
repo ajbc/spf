@@ -66,10 +66,14 @@ class Data {
 
         bool has_connection(int user, int neighbor);
 
+        //TODO: shouldn't need these, or any mapping
         int user_id(int user);
         int item_id(int item);
 
         int popularity(int item);
+        
+        set<int> users;
+        set<int> items;
     
         // training data
         int num_training();

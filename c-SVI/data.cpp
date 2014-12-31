@@ -31,6 +31,10 @@ void Data::read_ratings(string filename) {
         } else {
             item_popularity[item_ids[item]] += 1;
         }
+        
+        users.insert(user_ids[user]);
+        items.insert(item_ids[item]);
+
 
         if (rating != 0) {
             train_users.push_back(user_ids[user]);

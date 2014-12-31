@@ -167,9 +167,11 @@ class SPF {
     
         // parameter updates
         void update_shape(int user, int item, int rating);
+        void update_shape(int user, int item, int rating, bool sampled);
         void update_tau(int user);
         void update_theta(int user);
         void update_beta(int item);
+        void update_beta(int item, bool sampled);
 
         double get_ave_log_likelihood();
         void log_convergence(int iteration, double ave_ll, double delta_ll);
