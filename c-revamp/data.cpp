@@ -123,6 +123,7 @@ void Data::read_validation(string filename) {
             validation_ratings.push_back(rating != 0 ? 1 : 0);
         else
             validation_ratings.push_back(binary ? 1 : rating);
+        //TODO: all evaluation assumes no zero held out (see above lines for problem)
     }
 
     fclose(fileptr);
@@ -160,6 +161,7 @@ void Data::read_test(string filename) {
         test_items.insert(i);
         
         test_ratings(u, i) = rating;
+        test_count[u]++;
     }
 
     fclose(fileptr);
@@ -284,3 +286,9 @@ int Data::get_validation_rating(int i) {
 bool Data::in_validation(int user, int item) {
     return validation_ratings_matrix(user, item) != 0;
 }
+
+// test data
+int Data::num_test(int user) {
+    return test_count[user];
+}
+

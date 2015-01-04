@@ -208,7 +208,8 @@ void SPF::evaluate() {
         ratings.sort(prediction_compare);
 
         rank = 0;
-        while (!ratings.empty()) {
+        int test_count = data->num_test(user);
+        while (user_heldout < test_count) {
             pair<pair<double, int>, int> pred_set = ratings.front();
             item = pred_set.second;
             rating = data->test_ratings(user, pred_set.second);
@@ -247,6 +248,9 @@ void SPF::evaluate() {
                     first = rank;
             }
             
+            ratings.pop_front();
+        }
+        while (!ratings.empty()){
             ratings.pop_front();
         }
 

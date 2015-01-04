@@ -37,6 +37,9 @@ class Data {
         vector<int> validation_items;
         vector<int> validation_ratings;
         sp_mat validation_ratings_matrix;
+        
+        // test data
+        map<int,int> test_count;
 
         // for use in initializing the network data structures only
         bool has_connection_init(int user, int neighbor);
@@ -88,6 +91,7 @@ class Data {
         set<int> test_users;
         set<int> test_items;
         sp_umat test_ratings;
+        int num_test(int user);
 };
 
 #endif
