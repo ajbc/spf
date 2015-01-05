@@ -209,7 +209,7 @@ void SPF::evaluate() {
 
         rank = 0;
         int test_count = data->num_test(user);
-        while (user_heldout < test_count) {
+        while (user_heldout < test_count && !ratings.empty()) {
             pair<pair<double, int>, int> pred_set = ratings.front();
             item = pred_set.second;
             rating = data->test_ratings(user, pred_set.second);
