@@ -33,17 +33,25 @@ struct model_settings {
     int    min_iter;
     double likelihood_delta;
 
+    bool svi;
+    int    sample_size;
+    double delay;
+    double forget;
+
     int k;
   
     
-    void set(string out, string data, 
+    void set(string out, string data, bool use_svi,
              double athe, double bthe, double abet, double bbet, 
              double atau, double btau,
              bool social, bool factor, bool bin, bool dir,
              long rand, int lag, int iter_max, int iter_min, double delta,
+             int sample, double svi_delay, double svi_forget,
              int num_factors) {
         outdir = out;
         datadir = data;
+
+        svi = use_svi;
         
         a_theta = athe;
         b_theta = bthe;
@@ -63,7 +71,15 @@ struct model_settings {
         min_iter = iter_min;
         likelihood_delta = delta;
 
+        sample_size = sample;
+        delay = svi_delay;
+        forget = svi_forget;
+
         k = num_factors;
+    }
+    
+    void set_stochastic_inference(bool setting) {
+        svi = setting;
     }
 
     void save(string filename) {
@@ -117,6 +133,15 @@ struct model_settings {
         fprintf(file, "\tmaximum number of iterations:             %d\n", max_iter);
         fprintf(file, "\tminimum number of iterations:             %d\n", min_iter);
         fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);
+        
+        if (svi) {
+            printf("\nStochastic variational inference parameters\n");
+            printf("\tsample size:                              %d\n", sample_size);
+            printf("\tSVI delay (tau):                          %f\n", delay);
+            printf("\tSVI forgetting rate (kappa):              %f\n", forget);
+        } else {
+            printf("\nusing batch variational inference\n");
+        }
     
         fclose(file);
     }

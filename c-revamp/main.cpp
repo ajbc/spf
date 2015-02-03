@@ -23,6 +23,12 @@ void print_usage_and_exit() {
     printf("  --data {dir}      data directory, required\n");
     
     printf("\n");
+    printf("  --SVI             use stochastic VI (instead of batch VI);\n");
+    printf("                    default off for < 10M ratings in training\n");
+    printf("  --batch           use batch VI (instead of SVI); default on\n");
+    printf("                    default on for < 10M ratings in training\n");
+    
+    printf("\n");
     printf("  --a_theta {a}     shape hyperparamter to theta (user preferences); default 0.3\n");
     printf("  --b_theta {b}     rate hyperparamter to theta (user preferences); default 0.3\n");
     printf("  --a_beta {a}      shape hyperparamter to beta (item attributes); default 0.3\n");
@@ -40,10 +46,17 @@ void print_usage_and_exit() {
     
     printf("\n");
     printf("  --seed {seed}     the random seed, default from time\n");
-    printf("  --save_lag {lag}  the saving frequency, default 20\n                    -1 means no savings for intermediate results\n");
+    printf("  --save_lag {lag}  the saving frequency, default 20\n");
+    printf("                    -1 means no savings for intermediate results\n");
     printf("  --max_iter {max}  the max number of iterations, default 300\n");
     printf("  --min_iter {min}  the min number of iterations, default 30\n");
-    printf("  --converge {c}    the change in log likelihood required for convergence\n                    default 1e-6\n");
+    printf("  --converge {c}    the change in log likelihood required for convergence\n");
+    printf("                    default 1e-6\n");
+    printf("\n");
+
+    printf("  --sample {size}   the stochastic sample size, default 1000\n");
+    printf("  --svi_delay {t}   SVI delay >= 0 to down-weight early samples, default 1024\n");
+    printf("  --svi_forget {k}  SVI forgetting rate (0.5,1], default 0.75\n");
     printf("\n");
 
     printf("  --K {K}           the number of general factors, default 100\n");
@@ -61,6 +74,9 @@ int main(int argc, char* argv[]) {
     // variables to store command line args + defaults
     string out = "";
     string data = "";
+
+    bool svi = false;
+    bool batchvi = false;
 
     double a_theta = 0.3;
     double b_theta = 0.3;
@@ -81,15 +97,21 @@ int main(int argc, char* argv[]) {
     int    max_iter = 300;
     int    min_iter = 30;
     double converge_delta = 1e-6;
+    
+    int    sample_size = 1000;
+    double svi_delay = 1024;
+    double svi_forget = 0.75;
 
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "ho:d:1:2:3:4:5:6:s:l:x:m:c:k:";
+    const char* const short_options = "ho:d:vb1:2:3:4:5:6:s:l:x:m:c:a:e:f:k:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
         {"out",             required_argument, NULL, 'o'},
         {"data",            required_argument, NULL, 'd'},
+        {"svi",             required_argument, NULL, 'v'},
+        {"batch",           required_argument, NULL, 'b'},
         {"a_theta",         required_argument, NULL, '1'},
         {"b_theta",         required_argument, NULL, '2'},
         {"a_beta",          required_argument, NULL, '3'},
@@ -105,6 +127,9 @@ int main(int argc, char* argv[]) {
         {"max_iter",        required_argument, NULL, 'x'},
         {"min_iter",        required_argument, NULL, 'm'},
         {"converge",        required_argument, NULL, 'c'},
+        {"sample",          required_argument, NULL, 'a'},
+        {"delay",           required_argument, NULL, 'e'},
+        {"forget",          required_argument, NULL, 'f'},
         {"K",               required_argument, NULL, 'k'},
         {NULL, 0, NULL, 0}};
 
@@ -121,6 +146,12 @@ int main(int argc, char* argv[]) {
                 break;
             case 'd':
                 data = optarg;
+                break;
+            case 'v':
+                svi = true;
+                break;
+            case 'b':
+                batchvi = true;
                 break;
             case '1':
                 a_theta = atof(optarg);
@@ -155,6 +186,15 @@ int main(int argc, char* argv[]) {
             case 'c':
                 converge_delta =  atoi(optarg);
                 break;    
+            case 'a':
+                sample_size = atoi(optarg);
+                break;
+            case 'e':
+                svi_delay = atof(optarg);
+                break;
+            case 'f':
+                svi_forget = atof(optarg);
+                break;
             case 'k':
                 k = atoi(optarg);
                 break;
@@ -211,9 +251,13 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
     
-    
     if (social_only && factor_only) {
         printf("Model cannot be both social only (SF) and factor only (PF).  Exiting.\n");
+        exit(-1);
+    }
+    
+    if (svi && batchvi) {
+        printf("Inference method cannot be both stochatic (SVI) and batch.  Exiting.\n");
         exit(-1);
     }
     
@@ -255,7 +299,6 @@ int main(int argc, char* argv[]) {
             printf("\tundirected network\n");
         }
     }
-
     
     printf("\ninference parameters:\n");
     printf("\tseed:                                     %d\n", (int)seed);
@@ -264,14 +307,26 @@ int main(int argc, char* argv[]) {
     printf("\tminimum number of iterations:             %d\n", min_iter);
     printf("\tchange in log likelihood for convergence: %f\n", converge_delta);
     
+   
+    if (!batchvi) {
+        printf("\nStochastic variational inference parameters\n");
+        if (!svi)
+            printf("  (may not be used, pending dataset size)\n");
+        printf("\tsample size:                              %d\n", sample_size);
+        printf("\tSVI delay (tau):                          %f\n", svi_delay);
+        printf("\tSVI forgetting rate (kappa):              %f\n", svi_forget);
+    } else {
+        printf("\nusing batch variational inference\n");
+    }
+    
 
     // save the run settings
     printf("\nSAVING SETTINGS\n");
     model_settings settings;
-    settings.set(out, data, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
+    settings.set(out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
-        seed, save_lag, max_iter, min_iter, converge_delta, k);
-    settings.save(out + "/settings.txt");
+        seed, save_lag, max_iter, min_iter, converge_delta, 
+        sample_size, svi_delay, svi_forget, k);
 
     // read in the data
     printf("********************************************************************************\n");
@@ -280,6 +335,7 @@ int main(int argc, char* argv[]) {
     printf("\treading training data\t\t...\t");
     dataset->read_ratings(settings.datadir + "/train.tsv");
     printf("done\n");
+
     if (!factor_only) {
         printf("\treading network data\t\t...\t");
         dataset->read_network(settings.datadir + "/network.tsv");
@@ -291,6 +347,17 @@ int main(int argc, char* argv[]) {
     printf("\tsaving data stats\t\t...\t");
     dataset->save_summary(out + "/data_stats.txt");
     printf("done\n");
+    
+    if (!svi && !batchvi) {
+        if (dataset->num_training() > 10000000) {
+            settings.set_stochastic_inference(true);
+            printf("using SVI (based on dataset size)\n");
+        } else {
+            printf("using batch VI (based on dataset size)\n");
+        }
+    }
+    
+    settings.save(out + "/settings.txt");
 
     // create model instance; learn!
     printf("\ncreating model instance\n");
