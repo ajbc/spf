@@ -157,22 +157,22 @@ class SPF {
         Data* data;
        
         // model parameters
-        sp_mat tau; // user influence
-        sp_mat logtau; // fake "log" user influence
+        sp_fmat tau; // user influence
+        sp_fmat logtau; // fake "log" user influence
                        // it's really exp(E[log(tau)]) which != E[tau]
-        mat theta;  // user preferences
-        mat beta;   // item attributes
-        mat logtheta;  // log variant of above
-        mat logbeta;   // ditto
+        fmat theta;  // user preferences
+        fmat beta;   // item attributes
+        fmat logtheta;  // log variant of above
+        fmat logbeta;   // ditto
 
         // helper parameters
-        sp_mat a_tau;
-        sp_mat b_tau;
-        mat a_theta;
-        mat b_theta;
-        mat a_beta;
-        mat a_beta_old;
-        mat b_beta;
+        sp_fmat a_tau;
+        sp_fmat b_tau;
+        fmat a_theta;
+        fmat b_theta;
+        fmat a_beta;
+        fmat a_beta_old;
+        fmat b_beta;
     
         // random number generator
         gsl_rng* rand_gen;

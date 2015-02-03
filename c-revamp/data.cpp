@@ -40,7 +40,7 @@ void Data::read_ratings(string filename) {
     fclose(fileptr);
 
     umat locations = umat(2, num_training());
-    colvec values = colvec(num_training());
+    fcolvec values = fcolvec(num_training());
     user_items = new vector<int>[user_count()];
     for (int i = 0; i < num_training(); i++) {
         locations(0,i) = train_users[i]; // row
@@ -48,7 +48,7 @@ void Data::read_ratings(string filename) {
         values(i) = train_ratings[i];
         user_items[train_users[i]].push_back(train_items[i]);
     }
-    ratings = sp_mat(locations, values, user_count(), item_count());
+    ratings = sp_fmat(locations, values, user_count(), item_count());
 }
 
 void Data::read_network(string filename) {
@@ -82,7 +82,7 @@ void Data::read_network(string filename) {
     fclose(fileptr);
 
     umat locations = umat(2, network_count);
-    colvec values = colvec(network_count);
+    fcolvec values = fcolvec(network_count);
     network_count = 0;
     for (user = 0; user < user_count(); user++) {
         for (n = 0; n < neighbor_count(user); n++) {
@@ -95,7 +95,7 @@ void Data::read_network(string filename) {
         }
     }
 
-    network_spmat = sp_mat(locations, values, user_count(), user_count());
+    network_spmat = sp_fmat(locations, values, user_count(), user_count());
 
 }
 
@@ -128,14 +128,14 @@ void Data::read_validation(string filename) {
     fclose(fileptr);
     
     umat locations = umat(2, num_validation());
-    colvec values = colvec(num_validation());
+    fcolvec values = fcolvec(num_validation());
     for (int i = 0; i < num_validation(); i++) {
         locations(0, i) = validation_users[i];
         locations(1, i) = validation_items[i];
         values(i) = validation_ratings[i];
     }
 
-    validation_ratings_matrix = sp_mat(locations, values, user_count(), item_count());
+    validation_ratings_matrix = sp_fmat(locations, values, user_count(), item_count());
 }
 
 void Data::read_test(string filename) {

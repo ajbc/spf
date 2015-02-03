@@ -5,26 +5,26 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     data = dataset;
 
     // user influence
-    tau = sp_mat(data->user_count(), data->user_count());
-    logtau = sp_mat(data->user_count(), data->user_count());
-    a_tau = sp_mat(data->user_count(), data->user_count());
-    b_tau = sp_mat(data->user_count(), data->user_count());
+    tau = sp_fmat(data->user_count(), data->user_count());
+    logtau = sp_fmat(data->user_count(), data->user_count());
+    a_tau = sp_fmat(data->user_count(), data->user_count());
+    b_tau = sp_fmat(data->user_count(), data->user_count());
 
     // user preferences
-    theta = mat(settings->k, data->user_count());
-    logtheta = mat(settings->k, data->user_count());
-    a_theta = mat(settings->k, data->user_count());
-    b_theta = mat(settings->k, data->user_count());
+    theta = fmat(settings->k, data->user_count());
+    logtheta = fmat(settings->k, data->user_count());
+    a_theta = fmat(settings->k, data->user_count());
+    b_theta = fmat(settings->k, data->user_count());
 
     // item attributes
-    beta  = mat(settings->k, data->item_count());
-    logbeta  = mat(settings->k, data->item_count());
-    a_beta  = mat(settings->k, data->item_count());
-    b_beta  = mat(settings->k, data->item_count());
+    beta  = fmat(settings->k, data->item_count());
+    logbeta  = fmat(settings->k, data->item_count());
+    a_beta  = fmat(settings->k, data->item_count());
+    b_beta  = fmat(settings->k, data->item_count());
    
     // keep track of old a_beta for SVI
     if (settings->svi) {
-        a_beta_old  = mat(settings->k, data->item_count());
+        a_beta_old  = fmat(settings->k, data->item_count());
         a_beta_old.fill(settings->a_beta);
     }
     
@@ -435,11 +435,11 @@ void SPF::save_parameters(string label) {
 }
 
 void SPF::update_shape(int user, int item, int rating) {
-    sp_mat phi_SF = logtau.col(user) % data->ratings.col(item);
+    sp_fmat phi_SF = logtau.col(user) % data->ratings.col(item);
 
     double phi_sum = accu(phi_SF);
 
-    mat phi_MF;
+    fmat phi_MF;
     // we don't need to do a similar check for factor only because
     // sparse matrices play nice when empty
     if (!settings->social_only) {

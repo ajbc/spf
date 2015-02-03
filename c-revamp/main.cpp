@@ -23,7 +23,7 @@ void print_usage_and_exit() {
     printf("  --data {dir}      data directory, required\n");
     
     printf("\n");
-    printf("  --SVI             use stochastic VI (instead of batch VI)\n");
+    printf("  --svi             use stochastic VI (instead of batch VI)\n");
     printf("                    default off for < 10M ratings in training\n");
     printf("  --batch           use batch VI (instead of SVI)\n");
     printf("                    default on for < 10M ratings in training\n");

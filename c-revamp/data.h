@@ -39,7 +39,7 @@ class Data {
         vector<int> validation_users;
         vector<int> validation_items;
         vector<int> validation_ratings;
-        sp_mat validation_ratings_matrix;
+        sp_fmat validation_ratings_matrix;
         
         // test data
         map<int,int> test_count;
@@ -49,8 +49,8 @@ class Data {
 
 
     public:
-        sp_mat ratings; //TODO: should these be sp_umat types?
-        sp_mat network_spmat;
+        sp_fmat ratings;
+        sp_fmat network_spmat;
         
         Data(bool bin, bool dir);
         void read_ratings(string filename);
