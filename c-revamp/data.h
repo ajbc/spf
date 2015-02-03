@@ -1,11 +1,14 @@
 #ifndef DATA_H
 #define DATA_H
 
+
 #include <string>
 #include <stdio.h>
 #include <map>
 #include <vector>
 #include <set>
+
+#define ARMA_64BIT_WORD
 #include <armadillo>
 
 using namespace std;

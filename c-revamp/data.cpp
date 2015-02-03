@@ -11,10 +11,10 @@ void Data::read_ratings(string filename) {
     FILE* fileptr = fopen(filename.c_str(), "r");
 
     int user, item, rating;
-    set<long> dupe_checker;
+    set<unsigned long long> dupe_checker;
     while ((fscanf(fileptr, "%d\t%d\t%d\n", &user, &item, &rating) != EOF)) {
         // look for duplicate entries; this is not a perfect check, but it's ok
-        long dupe_id = item * 100000 + user * 100 +  rating;
+        unsigned long long dupe_id = item * 1000000000 + user * 100 +  rating;
         if (dupe_checker.count(dupe_id) != 0)
             continue;
         dupe_checker.insert(dupe_id);
@@ -27,15 +27,14 @@ void Data::read_ratings(string filename) {
         if (item_ids.count(item) == 0) {
             item_ids[item] = item_count() - 1;
             reverse_item_ids[item_ids[item]] = item;
-            item_popularity[item_ids[item]] = 1;
-        } else {
-            item_popularity[item_ids[item]] += 1;
+            item_popularity[item_ids[item]] = 0;
         }
 
         if (rating != 0) {
             train_users.push_back(user_ids[user]);
             train_items.push_back(item_ids[item]);
             train_ratings.push_back(binary ? 1 : rating);
+            item_popularity[item_ids[item]] += 1;
         }
     }
     fclose(fileptr);

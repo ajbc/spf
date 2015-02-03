@@ -1,4 +1,5 @@
 #include <iostream>
+#define ARMA_64BIT_WORD
 #include <armadillo>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_sf_psi.h>
