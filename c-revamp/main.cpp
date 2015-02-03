@@ -23,9 +23,9 @@ void print_usage_and_exit() {
     printf("  --data {dir}      data directory, required\n");
     
     printf("\n");
-    printf("  --SVI             use stochastic VI (instead of batch VI);\n");
+    printf("  --SVI             use stochastic VI (instead of batch VI)\n");
     printf("                    default off for < 10M ratings in training\n");
-    printf("  --batch           use batch VI (instead of SVI); default on\n");
+    printf("  --batch           use batch VI (instead of SVI)\n");
     printf("                    default on for < 10M ratings in training\n");
     
     printf("\n");
@@ -356,6 +356,8 @@ int main(int argc, char* argv[]) {
             printf("using batch VI (based on dataset size)\n");
         }
     }
+    if (!settings.svi)
+        settings.set_sample_size(dataset->user_count());
     
     settings.save(out + "/settings.txt");
 

@@ -81,6 +81,10 @@ struct model_settings {
     void set_stochastic_inference(bool setting) {
         svi = setting;
     }
+    
+    void set_sample_size(bool setting) {
+        sample_size = setting;
+    }
 
     void save(string filename) {
         FILE* file = fopen(filename.c_str(), "w");
@@ -167,6 +171,7 @@ class SPF {
         mat a_theta;
         mat b_theta;
         mat a_beta;
+        mat a_beta_old;
         mat b_beta;
     
         // random number generator
@@ -178,8 +183,9 @@ class SPF {
     
         // parameter updates
         void update_shape(int user, int item, int rating);
-        void update_MF();
-        void update_SF();
+        void update_tau(int user);
+        void update_theta(int user);
+        void update_beta(int item);
 
         double get_ave_log_likelihood();
         void log_convergence(int iteration, double ave_ll, double delta_ll);
@@ -192,6 +198,12 @@ class SPF {
         // track changes in parameters for logs
         double delta_theta;
         double delta_tau;
+
+        // define how to scale updates (training / sample size) (for SVI)
+        double scale; 
+        
+        // counts of number of times an item has been seen in a sample (for SVI)
+        map<int,int> iter_count;
 
         
     public:
