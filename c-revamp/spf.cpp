@@ -5,18 +5,22 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     data = dataset;
 
     // user influence
+    printf("\tinitializing user influence (tau)\n");
     tau = sp_fmat(data->user_count(), data->user_count());
     logtau = sp_fmat(data->user_count(), data->user_count());
     a_tau = sp_fmat(data->user_count(), data->user_count());
     b_tau = sp_fmat(data->user_count(), data->user_count());
 
     // user preferences
+    printf("\tinitializing user preferences (theta)\n");
     theta = fmat(settings->k, data->user_count());
     logtheta = fmat(settings->k, data->user_count());
     a_theta = fmat(settings->k, data->user_count());
     b_theta = fmat(settings->k, data->user_count());
 
     // item attributes
+    printf("\tinitializing item attributes (beta)\n");
+    printf("\t%d users and %d items\n", data->user_count(), data->item_count());
     beta  = fmat(settings->k, data->item_count());
     logbeta  = fmat(settings->k, data->item_count());
     a_beta  = fmat(settings->k, data->item_count());
@@ -28,6 +32,7 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
         a_beta_old.fill(settings->a_beta);
     }
     
+    printf("\tsetting random seed\n");
     rand_gen = gsl_rng_alloc(gsl_rng_taus);
     gsl_rng_set(rand_gen, (long) settings->seed); // init the seed
     
@@ -66,7 +71,7 @@ void SPF::learn() {
                 user = gsl_rng_uniform_int(rand_gen, data->user_count());
             else
                 user = i;
-
+        
             // look at all the user's items
             for (int j = 0; j < data->item_count(user); j++) {
                 item = data->get_item(user, j);

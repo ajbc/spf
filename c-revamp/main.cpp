@@ -320,8 +320,6 @@ int main(int argc, char* argv[]) {
     }
     
 
-    // save the run settings
-    printf("\nSAVING SETTINGS\n");
     model_settings settings;
     settings.set(out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
@@ -348,6 +346,8 @@ int main(int argc, char* argv[]) {
     dataset->save_summary(out + "/data_stats.txt");
     printf("done\n");
     
+    // save the run settings
+    printf("Saving settings\n");
     if (!svi && !batchvi) {
         if (dataset->num_training() > 10000000) {
             settings.set_stochastic_inference(true);
@@ -356,8 +356,10 @@ int main(int argc, char* argv[]) {
             printf("using batch VI (based on dataset size)\n");
         }
     }
+    printf("user count %d\n", dataset->user_count());
     if (!settings.svi)
         settings.set_sample_size(dataset->user_count());
+    printf("sample size %d\n", settings.sample_size);
     
     settings.save(out + "/settings.txt");
 

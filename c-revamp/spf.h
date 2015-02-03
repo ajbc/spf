@@ -82,7 +82,7 @@ struct model_settings {
         svi = setting;
     }
     
-    void set_sample_size(bool setting) {
+    void set_sample_size(int setting) {
         sample_size = setting;
     }
 
@@ -139,12 +139,12 @@ struct model_settings {
         fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);
         
         if (svi) {
-            printf("\nStochastic variational inference parameters\n");
-            printf("\tsample size:                              %d\n", sample_size);
-            printf("\tSVI delay (tau):                          %f\n", delay);
-            printf("\tSVI forgetting rate (kappa):              %f\n", forget);
+            fprintf(file, "\nStochastic variational inference parameters\n");
+            fprintf(file, "\tsample size:                              %d\n", sample_size);
+            fprintf(file, "\tSVI delay (tau):                          %f\n", delay);
+            fprintf(file, "\tSVI forgetting rate (kappa):              %f\n", forget);
         } else {
-            printf("\nusing batch variational inference\n");
+            fprintf(file, "\nusing batch variational inference\n");
         }
     
         fclose(file);
