@@ -390,13 +390,7 @@ int main(int argc, char* argv[]) {
     
     settings.save(out + "/settings.txt");
 
-    // create model instance; learn!
-    printf("\ncreating model instance\n");
-    SPF *model = new SPF(&settings, dataset);
-    printf("commencing model inference\n");
-    model->learn();
-
-    // test the model fit TODO: make this optional (--test_only, --no_test)
+    // TODO: make this/evaluate below optional (--test_only, --no_test)
     printf("********************************************************************************\n");
     printf("commencing model evaluation\n");
     if (!file_exists(data + "/test.tsv")) {
@@ -406,6 +400,14 @@ int main(int argc, char* argv[]) {
     printf("reading testing data\t\t...\t");
     dataset->read_test(settings.datadir + "/test.tsv");
     printf("done\n");
+    
+    // create model instance; learn!
+    printf("\ncreating model instance\n");
+    SPF *model = new SPF(&settings, dataset);
+    printf("commencing model inference\n");
+    model->learn();
+
+    // test the final model fit
     printf("evaluating model on held-out data\n");
     model->evaluate();
     

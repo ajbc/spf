@@ -69,9 +69,13 @@ void SPF::learn() {
                 user = gsl_rng_uniform_int(rand_gen, data->user_count());
             else
                 user = i;
+            printf("user %d\t(%d / %d)\n", user,i,settings->sample_size);
        
             bool user_converged = false;
+            int user_iters = 0;
             while (!user_converged) {
+                user_iters++;
+                printf("\t%d\n", user_iters);
                 a_beta_user.zeros();
                 float user_change = 0;
 
@@ -102,6 +106,7 @@ void SPF::learn() {
                     user_converged = true;
                 }
             }
+            printf("%d user %d took %d iters to converge\n", iteration, user, user_iters);
             a_beta += a_beta_user;
         }
     
