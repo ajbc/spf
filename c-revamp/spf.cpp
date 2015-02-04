@@ -72,7 +72,7 @@ void SPF::learn() {
        
             bool user_converged = false;
             while (!user_converged) {
-                a_beta_user.clear();
+                a_beta_user.zeros();
                 float user_change = 0;
 
                 // look at all the user's items
