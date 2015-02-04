@@ -36,6 +36,7 @@ struct model_settings {
     double likelihood_delta;
 
     bool svi;
+    bool final_pass;
     int    sample_size;
     double delay;
     double forget;
@@ -49,7 +50,7 @@ struct model_settings {
              bool social, bool factor, bool bin, bool dir,
              long rand, int savef, int evalf, int convf, 
              int iter_max, int iter_min, double delta,
-             int sample, double svi_delay, double svi_forget,
+             bool finalpass, int sample, double svi_delay, double svi_forget,
              int num_factors) {
         outdir = out;
         datadir = data;
@@ -76,6 +77,7 @@ struct model_settings {
         min_iter = iter_min;
         likelihood_delta = delta;
 
+        final_pass = finalpass;
         sample_size = sample;
         delay = svi_delay;
         forget = svi_forget;
@@ -144,6 +146,7 @@ struct model_settings {
         fprintf(file, "\tmaximum number of iterations:             %d\n", max_iter);
         fprintf(file, "\tminimum number of iterations:             %d\n", min_iter);
         fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);
+        fprintf(file, "\tdo a final pass after convergence:        %s\n", final_pass ? "true" : "false");
         
         if (svi) {
             fprintf(file, "\nStochastic variational inference parameters\n");
@@ -178,6 +181,7 @@ class SPF {
         fmat a_theta;
         fmat b_theta;
         fmat a_beta;
+        sp_fmat a_beta_user;
         fmat a_beta_old;
         fmat b_beta;
     
@@ -190,8 +194,8 @@ class SPF {
     
         // parameter updates
         void update_shape(int user, int item, int rating);
-        void update_tau(int user);
-        void update_theta(int user);
+        float update_tau(int user);
+        float update_theta(int user);
         void update_beta(int item);
 
         double get_ave_log_likelihood();
@@ -202,10 +206,6 @@ class SPF {
             double mae, double rank, int first, double crr, double ncrr,
             double ndcg);
     
-        // track changes in parameters for logs
-        double delta_theta;
-        double delta_tau;
-
         // define how to scale updates (training / sample size) (for SVI)
         double scale; 
         

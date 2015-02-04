@@ -55,6 +55,7 @@ void print_usage_and_exit() {
     printf("  --min_iter {min}  the min number of iterations, default 30\n");
     printf("  --converge {c}    the change in log likelihood required for convergence\n");
     printf("                    default 1e-6\n");
+    printf("  --final_pass      do a final pass on all users and items\n");
     printf("\n");
 
     printf("  --sample {size}   the stochastic sample size, default 1000\n");
@@ -93,6 +94,7 @@ int main(int argc, char* argv[]) {
     int factor_only = 0;
     int binary = 0;
     int directed = 0;
+    bool final_pass = 0;
 
     time_t t; time(&t);
     long   seed = (long) t;
@@ -110,13 +112,13 @@ int main(int argc, char* argv[]) {
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "ho:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:k:";
+    const char* const short_options = "ho:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:pk:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
         {"out",             required_argument, NULL, 'o'},
         {"data",            required_argument, NULL, 'd'},
-        {"svi",             required_argument, NULL, 'v'},
-        {"batch",           required_argument, NULL, 'b'},
+        {"svi",             no_argument, NULL, 'v'},
+        {"batch",           no_argument, NULL, 'b'},
         {"a_theta",         required_argument, NULL, '1'},
         {"b_theta",         required_argument, NULL, '2'},
         {"a_beta",          required_argument, NULL, '3'},
@@ -137,6 +139,7 @@ int main(int argc, char* argv[]) {
         {"sample",          required_argument, NULL, 'a'},
         {"delay",           required_argument, NULL, 'e'},
         {"forget",          required_argument, NULL, 'f'},
+        {"final_pass",      no_argument, NULL, 'p'},
         {"K",               required_argument, NULL, 'k'},
         {NULL, 0, NULL, 0}};
 
@@ -208,6 +211,9 @@ int main(int argc, char* argv[]) {
             case 'f':
                 svi_forget = atof(optarg);
                 break;
+            case 'p':
+                final_pass = true;
+                break;
             case 'k':
                 k = atoi(optarg);
                 break;
@@ -274,6 +280,11 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
     
+    if (batchvi && final_pass) {
+        printf("Batch VI doesn't allow for a \"final pass.\" Ignoring this argument.\n");
+        final_pass = false;
+    }
+    
     printf("\nmodel specification:\n");
     
     if (social_only) {
@@ -321,6 +332,7 @@ int main(int argc, char* argv[]) {
     printf("\tmaximum number of iterations:             %d\n", max_iter);
     printf("\tminimum number of iterations:             %d\n", min_iter);
     printf("\tchange in log likelihood for convergence: %f\n", converge_delta);
+    printf("\tdo a final pass after convergence:        %s\n", final_pass ? "true" : "false");
     
    
     if (!batchvi) {
@@ -339,7 +351,7 @@ int main(int argc, char* argv[]) {
     settings.set(out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
         seed, save_freq, eval_freq, conv_freq, max_iter, min_iter, converge_delta,
-        sample_size, svi_delay, svi_forget, k);
+        final_pass, sample_size, svi_delay, svi_forget, k);
 
     // read in the data
     printf("********************************************************************************\n");

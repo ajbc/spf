@@ -24,6 +24,7 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     beta  = fmat(settings->k, data->item_count());
     logbeta  = fmat(settings->k, data->item_count());
     a_beta  = fmat(settings->k, data->item_count());
+    a_beta_user = sp_fmat(settings->k, data->item_count());
     b_beta  = fmat(settings->k, data->item_count());
    
     // keep track of old a_beta for SVI
@@ -38,10 +39,6 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     
     initialize_parameters(); 
 
-    // initize these to 0 for when they're never set (social only, factor only)
-    delta_theta = 0;
-    delta_tau = 0; //rm these????
-
     scale = settings->svi ? data->user_count() / settings->sample_size : 1;
 }
 
@@ -53,6 +50,7 @@ void SPF::learn() {
     int iteration = 0;
     char iter_as_str[4];
     bool converged = false;
+    bool on_final_pass = false;
 
     while (!converged) {
         time(&start_time);
@@ -71,21 +69,34 @@ void SPF::learn() {
                 user = gsl_rng_uniform_int(rand_gen, data->user_count());
             else
                 user = i;
-        
-            // look at all the user's items
-            for (int j = 0; j < data->item_count(user); j++) {
-                item = data->get_item(user, j);
-                items.insert(item);
-                rating = 1;
-                //TODO: rating = data->get_train_rating(i);
-                update_shape(user, item, rating);
-            }
+       
+            bool user_converged = false;
+            while (!user_converged) {
+                a_beta_user.clear();
+                float user_change = 0;
 
-            // update per-user parameters
-            if (!settings->factor_only)
-                update_tau(user);
-            if (!settings->social_only)
-                update_theta(user);
+                // look at all the user's items
+                for (int j = 0; j < data->item_count(user); j++) {
+                    item = data->get_item(user, j);
+                    items.insert(item);
+                    rating = 1;
+                    //TODO: rating = data->get_train_rating(i);
+                    update_shape(user, item, rating);
+                }
+
+                // update per-user parameters
+                if (!settings->factor_only)
+                    user_change += update_tau(user);
+                if (!settings->social_only)
+                    user_change += update_theta(user);
+                if (!settings->social_only && !settings->factor_only)
+                    user_change /= 2;
+
+                // if the updates are less than 1% change, the local params have converged
+                if (user_change < 0.01)
+                    user_converged = true;
+            }
+            a_beta += a_beta_user;
         }
     
         if (!settings->social_only) {
@@ -103,9 +114,10 @@ void SPF::learn() {
             }
         }
 
-        log_params(iteration, delta_tau, delta_theta); // TODO: rm this or modify to adapt to SVI
         // check for convergence
-        if (iteration % settings->conv_freq == 0) {
+        if (on_final_pass) {
+            converged = true;
+        } else if (iteration % settings->conv_freq == 0) {
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
 
@@ -151,6 +163,18 @@ void SPF::learn() {
 
         time(&end_time);
         log_time(iteration, difftime(end_time, start_time));
+
+        if (converged && settings->final_pass) {
+            printf("final pass on all users\n.");
+            on_final_pass = true;
+            converged = false;
+
+            // we need to modify some settings for the final pass
+            // things should look exactly like batch here 
+            settings->set_stochastic_inference(false);
+            settings->set_sample_size(data->user_count()); 
+            scale = 1;
+        }
     }
     
     save_parameters("final");
@@ -493,25 +517,39 @@ void SPF::update_shape(int user, int item, int rating) {
     if (!settings->social_only) {
         phi_MF /= phi_sum * rating;
         a_theta.col(user) += phi_MF;
-        a_beta.col(item)  += phi_MF * scale;
+        a_beta_user.col(item)  += phi_MF * scale;
     }
 }
 
-void SPF::update_tau(int user) {
+float SPF::update_tau(int user) {
     int neighbor, n;
+    float old, change, total;
     for (n = 0; n < data->neighbor_count(user); n++) {
         neighbor = data->get_neighbor(user, n);
+        
+        old = tau(neighbor, user);
+        total += tau(neighbor, user);
+
         tau(neighbor, user) = a_tau(neighbor, user) / b_tau(neighbor, user);
         // fake log!
         logtau(neighbor, user) = exp(gsl_sf_psi(a_tau(neighbor, user)) - log(b_tau(neighbor, user)));
+        
+        change += abs(old - tau(neighbor, user));
     }
+
+    return change / total;
 }
 
-void SPF::update_theta(int user) {
+float SPF::update_theta(int user) {
+    float change = accu(abs(theta(user) - (a_theta(user) / b_theta(user))));
+    float total = accu(theta(user));
+
     theta(user) = a_theta(user) / b_theta(user);
     for (int k = 0; k < settings->k; k++)
         logtheta(k, user) = gsl_sf_psi(a_theta(k, user));
     logtheta(user) = logtheta(user) - log(b_theta(user));
+
+    return change / total;
 }
 
 void SPF::update_beta(int item) {
@@ -553,12 +591,6 @@ void SPF::log_convergence(int iteration, double ave_ll, double delta_ll) {
 void SPF::log_time(int iteration, double duration) {
     FILE* file = fopen((settings->outdir+"/time_log.dat").c_str(), "a");
     fprintf(file, "%d\t%.f\n", iteration, duration);
-    fclose(file);
-}
-
-void SPF::log_params(int iteration, double tau_change, double theta_change) {
-    FILE* file = fopen((settings->outdir+"/param_log.dat").c_str(), "a");
-    fprintf(file, "%d\t%e\t%e\n", iteration, tau_change, theta_change);
     fclose(file);
 }
 
