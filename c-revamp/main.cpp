@@ -46,8 +46,9 @@ void print_usage_and_exit() {
     
     printf("\n");
     printf("  --seed {seed}     the random seed, default from time\n");
-    printf("  --save_lag {lag}  the saving frequency, default 20\n");
-    printf("                    -1 means no savings for intermediate results\n");
+    printf("  --save_lag {lag}  the saving frequency, default 20.  Negative numbers mean\n");
+    printf("                    no savings for intermediate results, but still specify\n");
+    printf("                    how frequently we check for convergence.\n");
     printf("  --max_iter {max}  the max number of iterations, default 300\n");
     printf("  --min_iter {min}  the min number of iterations, default 30\n");
     printf("  --converge {c}    the change in log likelihood required for convergence\n");

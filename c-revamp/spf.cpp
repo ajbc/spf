@@ -129,7 +129,7 @@ void SPF::learn() {
             } else if (iteration >= settings->max_iter) {
                 printf("Reached maximum number of iterations.\n");
                 converged = true;
-            } else {
+            } else if (settings->save_lag > 0) {
                 printf(" saving\n");
                 sprintf(iter_as_str, "%04d", iteration);
                 save_parameters(iter_as_str);
