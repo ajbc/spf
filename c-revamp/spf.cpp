@@ -89,12 +89,18 @@ void SPF::learn() {
                     user_change += update_tau(user);
                 if (!settings->social_only)
                     user_change += update_theta(user);
-                if (!settings->social_only && !settings->factor_only)
+                if (!settings->social_only && !settings->factor_only) {
                     user_change /= 2;
 
-                // if the updates are less than 1% change, the local params have converged
-                if (user_change < 0.01)
+                    // if the updates are less than 1% change, the local params have converged
+                    if (user_change < 0.01)
+                        user_converged = true;
+                } else {
+                    // if we're only looking at social or factor (not combined)
+                    // then the user parameters will always have converged with
+                    // a single pass (since there's nothing to balance against)
                     user_converged = true;
+                }
             }
             a_beta += a_beta_user;
         }
