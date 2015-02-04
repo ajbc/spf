@@ -163,7 +163,6 @@ void SPF::learn() {
         if (!converged && settings->eval_freq > 0 &&
             iteration % settings->eval_freq == 0) {
             sprintf(iter_as_str, "%04d", iteration);
-            save_parameters(iter_as_str);
             evaluate(iter_as_str);
         }
 
@@ -225,6 +224,7 @@ void SPF::evaluate(string label, bool write_rankings) {
         file = fopen((settings->outdir+"/rankings_"+label+".tsv").c_str(), "w");
         fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
     }
+    // TODO: add likelihood here
     
     FILE* user_file = fopen((settings->outdir+"/user_eval_"+label+".tsv").c_str(), "w");
     fprintf(user_file, "user.map\tuser.id\tnum.heldout\tnum.train\tdegree\tconnectivity\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
