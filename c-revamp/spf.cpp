@@ -103,8 +103,9 @@ void SPF::learn() {
             }
         }
 
-        log_params(iteration, delta_tau, delta_theta);
-        if (iteration % settings->save_lag == 0) {
+        log_params(iteration, delta_tau, delta_theta); // TODO: rm this or modify to adapt to SVI
+        // check for convergence
+        if (iteration % settings->conv_freq == 0) {
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
 
@@ -129,12 +130,25 @@ void SPF::learn() {
             } else if (iteration >= settings->max_iter) {
                 printf("Reached maximum number of iterations.\n");
                 converged = true;
-            } else if (settings->save_lag > 0) {
-                printf(" saving\n");
-                sprintf(iter_as_str, "%04d", iteration);
-                save_parameters(iter_as_str);
             }
         }
+        
+        // save intermediate results
+        if (!converged && settings->save_freq > 0 && 
+            iteration % settings->save_freq == 0) {
+            printf(" saving\n");
+            sprintf(iter_as_str, "%04d", iteration);
+            save_parameters(iter_as_str);
+        }
+
+        // intermediate evaluation
+        if (!converged && settings->eval_freq > 0 &&
+            iteration % settings->eval_freq == 0) {
+            sprintf(iter_as_str, "%04d", iteration);
+            save_parameters(iter_as_str);
+            evaluate(iter_as_str);
+        }
+
         time(&end_time);
         log_time(iteration, difftime(end_time, start_time));
     }
@@ -165,13 +179,24 @@ bool prediction_compare(const pair<pair<double,int>, int>& itemA,
 }
 
 void SPF::evaluate() {
+    evaluate("final", true);
+}
+
+void SPF::evaluate(string label) {
+    evaluate(label, false);
+}
+
+void SPF::evaluate(string label, bool write_rankings) {
     time_t start_time, end_time;
     time(&start_time);
     
-    FILE* file = fopen((settings->outdir+"/rankings.tsv").c_str(), "w");
-    fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
+    FILE* file;
+    if (write_rankings) {
+        file = fopen((settings->outdir+"/rankings_"+label+".tsv").c_str(), "w");
+        fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
+    }
     
-    FILE* user_file = fopen((settings->outdir+"/user_eval.tsv").c_str(), "w");
+    FILE* user_file = fopen((settings->outdir+"/user_eval_"+label+".tsv").c_str(), "w");
     fprintf(user_file, "user.map\tuser.id\tnum.heldout\tnum.train\tdegree\tconnectivity\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
     
     // overall metrics to track
@@ -257,7 +282,7 @@ void SPF::evaluate() {
             rating = data->test_ratings(user, pred_set.second);
             pred = pred_set.first.first;
             rank++;
-            if (rank <= 1000) { // TODO: make this threshold a command line arg
+            if (rank <= 1000 && write_rankings) { // TODO: make this threshold a command line arg
                 fprintf(file, "%d\t%d\t%d\t%d\t%f\t%d\t%d\n", user, data->user_id(user),
                     item, data->item_id(item), pred, rank, rating);
             }
@@ -315,12 +340,13 @@ void SPF::evaluate() {
         user_sum_ncrr += user_ncrr;
         user_sum_ndcg += user_ndcg;
     }
-    fclose(file);
     fclose(user_file);
+    if (write_rankings)
+        fclose(file);
     
     
     // write out results
-    file = fopen((settings->outdir+"/eval_summary.dat").c_str(), "w");
+    file = fopen((settings->outdir+"/eval_summary_"+label+".dat").c_str(), "w");
     fprintf(file, "metric\tuser average\theldout pair average\n");
     fprintf(file, "RMSE\t%f\t%f\n", user_sum_rmse/user_count, 
         sqrt(rmse/heldout_count));

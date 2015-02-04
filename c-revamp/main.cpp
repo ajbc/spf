@@ -46,9 +46,11 @@ void print_usage_and_exit() {
     
     printf("\n");
     printf("  --seed {seed}     the random seed, default from time\n");
-    printf("  --save_lag {lag}  the saving frequency, default 20.  Negative numbers mean\n");
-    printf("                    no savings for intermediate results, but still specify\n");
-    printf("                    how frequently we check for convergence.\n");
+    printf("  --save_freq {f}   the saving frequency, default 20.  Negative value means\n");
+    printf("                    no savings for intermediate results.\n");
+    printf("  --eval_freq {f}   the intermediate evaluating frequency, default -1.\n");
+    printf("                    Negative means no evaluation for intermediate results.\n");
+    printf("  --conv_freq {f}   the convergence check frequency, default 10.\n");
     printf("  --max_iter {max}  the max number of iterations, default 300\n");
     printf("  --min_iter {min}  the min number of iterations, default 30\n");
     printf("  --converge {c}    the change in log likelihood required for convergence\n");
@@ -94,7 +96,9 @@ int main(int argc, char* argv[]) {
 
     time_t t; time(&t);
     long   seed = (long) t;
-    int    save_lag = 20;
+    int    save_freq = 20;
+    int    eval_freq = -1;
+    int    conv_freq = 10;
     int    max_iter = 300;
     int    min_iter = 30;
     double converge_delta = 1e-6;
@@ -106,7 +110,7 @@ int main(int argc, char* argv[]) {
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "ho:d:vb1:2:3:4:5:6:s:l:x:m:c:a:e:f:k:";
+    const char* const short_options = "ho:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:k:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
         {"out",             required_argument, NULL, 'o'},
@@ -124,7 +128,9 @@ int main(int argc, char* argv[]) {
         {"binary",          no_argument, &binary, 1},
         {"directed",        no_argument, &directed, 1},
         {"seed",            required_argument, NULL, 's'},
-        {"save_lag",        required_argument, NULL, 'l'},
+        {"save_freq",       required_argument, NULL, '7'},
+        {"eval_freq",       required_argument, NULL, '8'},
+        {"conv_freq",       required_argument, NULL, '9'},
         {"max_iter",        required_argument, NULL, 'x'},
         {"min_iter",        required_argument, NULL, 'm'},
         {"converge",        required_argument, NULL, 'c'},
@@ -175,8 +181,14 @@ int main(int argc, char* argv[]) {
             case 's':
                 seed = atoi(optarg);
                 break;
-            case 'l':
-                save_lag = atoi(optarg);
+            case '7':
+                save_freq = atoi(optarg);
+                break;
+            case '8':
+                eval_freq = atoi(optarg);
+                break;
+            case '9':
+                conv_freq = atoi(optarg);
                 break;
             case 'x':
                 max_iter =  atoi(optarg);
@@ -303,7 +315,9 @@ int main(int argc, char* argv[]) {
     
     printf("\ninference parameters:\n");
     printf("\tseed:                                     %d\n", (int)seed);
-    printf("\tsave lag:                                 %d\n", save_lag);
+    printf("\tsave frequency:                           %d\n", save_freq);
+    printf("\tevaluation frequency:                     %d\n", eval_freq);
+    printf("\tconvergence check frequency:              %d\n", conv_freq);
     printf("\tmaximum number of iterations:             %d\n", max_iter);
     printf("\tminimum number of iterations:             %d\n", min_iter);
     printf("\tchange in log likelihood for convergence: %f\n", converge_delta);
@@ -324,7 +338,7 @@ int main(int argc, char* argv[]) {
     model_settings settings;
     settings.set(out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
-        seed, save_lag, max_iter, min_iter, converge_delta, 
+        seed, save_freq, eval_freq, conv_freq, max_iter, min_iter, converge_delta,
         sample_size, svi_delay, svi_forget, k);
 
     // read in the data

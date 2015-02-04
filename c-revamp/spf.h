@@ -28,7 +28,9 @@ struct model_settings {
     bool directed;
     
     long   seed;
-    int    save_lag;
+    int    save_freq;
+    int    eval_freq;
+    int    conv_freq;
     int    max_iter;
     int    min_iter;
     double likelihood_delta;
@@ -45,7 +47,8 @@ struct model_settings {
              double athe, double bthe, double abet, double bbet, 
              double atau, double btau,
              bool social, bool factor, bool bin, bool dir,
-             long rand, int lag, int iter_max, int iter_min, double delta,
+             long rand, int savef, int evalf, int convf, 
+             int iter_max, int iter_min, double delta,
              int sample, double svi_delay, double svi_forget,
              int num_factors) {
         outdir = out;
@@ -66,7 +69,9 @@ struct model_settings {
         directed = dir;
 
         seed = rand;
-        save_lag = lag;
+        save_freq = savef;
+        eval_freq = evalf;
+        conv_freq = convf;
         max_iter = iter_max;
         min_iter = iter_min;
         likelihood_delta = delta;
@@ -133,7 +138,9 @@ struct model_settings {
         
         fprintf(file, "\ninference parameters:\n");
         fprintf(file, "\tseed:                                     %d\n", (int)seed);
-        fprintf(file, "\tsave lag:                                 %d\n", save_lag);
+        fprintf(file, "\tsave frequency:                           %d\n", save_freq);
+        fprintf(file, "\tevaluation frequency:                     %d\n", eval_freq);
+        fprintf(file, "\tconvergence check frequency:              %d\n", conv_freq);
         fprintf(file, "\tmaximum number of iterations:             %d\n", max_iter);
         fprintf(file, "\tminimum number of iterations:             %d\n", min_iter);
         fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);
@@ -205,10 +212,14 @@ class SPF {
         // counts of number of times an item has been seen in a sample (for SVI)
         map<int,int> iter_count;
 
+        void evaluate(string label);
+        void evaluate(string label, bool write_rankings);
+
         
     public:
         SPF(model_settings* model_set, Data* dataset);
         void learn();
         double predict(int user, int item);
         void evaluate();
+
 };
