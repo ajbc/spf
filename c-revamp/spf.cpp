@@ -69,13 +69,11 @@ void SPF::learn() {
                 user = gsl_rng_uniform_int(rand_gen, data->user_count());
             else
                 user = i;
-            printf("user %d\t(%d / %d)\n", user,i,settings->sample_size);
        
             bool user_converged = false;
             int user_iters = 0;
             while (!user_converged) {
                 user_iters++;
-                printf("\t%d\n", user_iters);
                 a_beta_user.zeros();
                 float user_change = 0;
 
@@ -106,7 +104,8 @@ void SPF::learn() {
                     user_converged = true;
                 }
             }
-            printf("%d user %d took %d iters to converge\n", iteration, user, user_iters);
+            if (settings->verbose)
+                printf("%d\tuser %d took %d iters to converge\n", iteration, user, user_iters);
             a_beta += a_beta_user;
         }
     
@@ -128,6 +127,9 @@ void SPF::learn() {
         // check for convergence
         if (on_final_pass) {
             converged = true;
+        } else if (iteration >= settings->max_iter) {
+            printf("Reached maximum number of iterations.\n");
+            converged = true;
         } else if (iteration % settings->conv_freq == 0) {
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
@@ -139,9 +141,11 @@ void SPF::learn() {
             delta_likelihood = abs((old_likelihood - likelihood) / 
                 old_likelihood);
             log_convergence(iteration, likelihood, delta_likelihood);
-            printf("delta: %f\n", delta_likelihood);
-            printf("old:   %f\n", old_likelihood);
-            printf("new:   %f\n", likelihood);
+            if (settings->verbose) {
+                printf("delta: %f\n", delta_likelihood);
+                printf("old:   %f\n", old_likelihood);
+                printf("new:   %f\n", likelihood);
+            }
             if (iteration >= settings->min_iter &&
                 delta_likelihood < settings->likelihood_delta) {
                 printf("Model converged.\n");
@@ -149,9 +153,6 @@ void SPF::learn() {
             } else if (iteration >= settings->min_iter &&
                 likelihood_decreasing_count >= 2) {
                 printf("Likelihood decreasing.\n");
-                converged = true;
-            } else if (iteration >= settings->max_iter) {
-                printf("Reached maximum number of iterations.\n");
                 converged = true;
             }
         }

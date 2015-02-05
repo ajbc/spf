@@ -17,6 +17,7 @@ void print_usage_and_exit() {
     printf("\nusage:\n");
     printf(" spf [options]\n");
     printf("  --help            print help information\n");
+    printf("  --verbose         print extra information while running\n");
 
     printf("\n");
     printf("  --out {dir}       save directory, required\n");
@@ -74,10 +75,11 @@ int main(int argc, char* argv[]) {
     if (argc < 2) print_usage_and_exit();
 
     char filename[500];
-   
+  
     // variables to store command line args + defaults
     string out = "";
     string data = "";
+    bool verbose = false;
 
     bool svi = false;
     bool batchvi = false;
@@ -112,9 +114,10 @@ int main(int argc, char* argv[]) {
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "ho:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:pk:";
+    const char* const short_options = "h>o:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:pk:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
+        {"verbose",         no_argument,       NULL, '>'},
         {"out",             required_argument, NULL, 'o'},
         {"data",            required_argument, NULL, 'd'},
         {"svi",             no_argument, NULL, 'v'},
@@ -150,6 +153,9 @@ int main(int argc, char* argv[]) {
         switch(opt) {
             case 'h':
                 print_usage_and_exit();
+                break;
+            case '>':
+                verbose = true;
                 break;
             case 'o':
                 out = optarg;
@@ -348,7 +354,7 @@ int main(int argc, char* argv[]) {
     
 
     model_settings settings;
-    settings.set(out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
+    settings.set(verbose, out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
         (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
         seed, save_freq, eval_freq, conv_freq, max_iter, min_iter, converge_delta,
         final_pass, sample_size, svi_delay, svi_forget, k);

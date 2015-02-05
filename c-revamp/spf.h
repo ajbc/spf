@@ -12,6 +12,8 @@ using namespace arma;
 #include "data.h"
 
 struct model_settings {
+    bool verbose;
+
     string outdir;
     string datadir;
 
@@ -44,7 +46,7 @@ struct model_settings {
     int k;
   
     
-    void set(string out, string data, bool use_svi,
+    void set(bool print, string out, string data, bool use_svi,
              double athe, double bthe, double abet, double bbet, 
              double atau, double btau,
              bool social, bool factor, bool bin, bool dir,
@@ -52,6 +54,8 @@ struct model_settings {
              int iter_max, int iter_min, double delta,
              bool finalpass, int sample, double svi_delay, double svi_forget,
              int num_factors) {
+        verbose = print;
+
         outdir = out;
         datadir = data;
 
