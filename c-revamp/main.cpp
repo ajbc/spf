@@ -74,8 +74,6 @@ void print_usage_and_exit() {
 int main(int argc, char* argv[]) {
     if (argc < 2) print_usage_and_exit();
 
-    char filename[500];
-  
     // variables to store command line args + defaults
     string out = "";
     string data = "";

@@ -191,7 +191,7 @@ int Data::user_count() {
 }
 
 bool Data::has_connection_init(int user, int neighbor) {
-    for (int i = 0; i < network[user].size(); i++) {
+    for (unsigned int i = 0; i < network[user].size(); i++) {
         if (network[user][i] == neighbor)
             return true;
     }
@@ -218,7 +218,7 @@ int Data::get_neighbor(int user, int n) {
 
 int Data::connectivity(int user) {
     int connections = 0;
-    int i, j;
+    unsigned int i, j;
     for (i = 0; i < network[user].size(); i++) {
         for (j = 0; j < network[user].size(); j++) {
             if (has_connection(network[user][i], network[user][j]))

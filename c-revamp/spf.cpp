@@ -581,7 +581,7 @@ void SPF::update_beta(int item) {
 }
 
 double SPF::get_ave_log_likelihood() {
-    double likelihood, prediction;
+    double prediction, likelihood = 0;
     int user, item, rating;
     for (int i = 0; i < data->num_validation(); i++) {
         user = data->get_validation_user(i);
