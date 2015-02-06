@@ -114,10 +114,10 @@ int main(int argc, char* argv[]) {
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "h>o:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:pk:";
+    const char* const short_options = "hqo:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:pk:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
-        {"verbose",         no_argument,       NULL, '>'},
+        {"verbose",         no_argument,       NULL, 'q'},
         {"out",             required_argument, NULL, 'o'},
         {"data",            required_argument, NULL, 'd'},
         {"svi",             no_argument, NULL, 'v'},
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
             case 'h':
                 print_usage_and_exit();
                 break;
-            case '>':
+            case 'q':
                 verbose = true;
                 break;
             case 'o':

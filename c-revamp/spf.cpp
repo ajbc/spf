@@ -75,7 +75,6 @@ void SPF::learn() {
             while (!user_converged) {
                 user_iters++;
                 a_beta_user.zeros();
-                float user_change = 0;
 
                 // look at all the user's items
                 for (int j = 0; j < data->item_count(user); j++) {
@@ -87,6 +86,7 @@ void SPF::learn() {
                 }
 
                 // update per-user parameters
+                double user_change = 0;
                 if (!settings->factor_only)
                     user_change += update_tau(user);
                 if (!settings->social_only)
@@ -97,6 +97,7 @@ void SPF::learn() {
                     // if the updates are less than 1% change, the local params have converged
                     if (user_change < 0.01)
                         user_converged = true;
+
                 } else {
                     // if we're only looking at social or factor (not combined)
                     // then the user parameters will always have converged with
@@ -533,9 +534,11 @@ void SPF::update_shape(int user, int item, int rating) {
     }
 }
 
-float SPF::update_tau(int user) {
+double SPF::update_tau(int user) {
     int neighbor, n;
-    float old, change, total;
+    double old, change, total;
+    change = 0;
+    total = 0;
     for (n = 0; n < data->neighbor_count(user); n++) {
         neighbor = data->get_neighbor(user, n);
         
@@ -549,12 +552,12 @@ float SPF::update_tau(int user) {
         change += abs(old - tau(neighbor, user));
     }
 
-    return change / total;
+    return total==0 ? 0 : change / total;
 }
 
-float SPF::update_theta(int user) {
-    float change = accu(abs(theta(user) - (a_theta(user) / b_theta(user))));
-    float total = accu(theta(user));
+double SPF::update_theta(int user) {
+    double change = accu(abs(theta(user) - (a_theta(user) / b_theta(user))));
+    double total = accu(theta(user));
 
     theta(user) = a_theta(user) / b_theta(user);
     for (int k = 0; k < settings->k; k++)

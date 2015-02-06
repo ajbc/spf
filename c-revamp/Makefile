@@ -1,4 +1,4 @@
-CC = g++ -O1 -larmadillo -lgsl
+CC = g++ -O0 -larmadillo -lgsl -Wall
 #CC = g++ -ansi -Wall -pedantic
 ##CFLAGS = -g -Wall -O3 -ffast-math -DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
 ## CFLAGS = -g -Wall
