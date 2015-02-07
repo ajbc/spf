@@ -127,10 +127,23 @@ void SPF::learn() {
 
         // check for convergence
         if (on_final_pass) {
+            printf("Final pass complete\n");
             converged = true;
+            
+            old_likelihood = likelihood;
+            likelihood = get_ave_log_likelihood();
+            delta_likelihood = abs((old_likelihood - likelihood) / 
+                old_likelihood);
+            log_convergence(iteration, likelihood, delta_likelihood);
         } else if (iteration >= settings->max_iter) {
             printf("Reached maximum number of iterations.\n");
             converged = true;
+            
+            old_likelihood = likelihood;
+            likelihood = get_ave_log_likelihood();
+            delta_likelihood = abs((old_likelihood - likelihood) / 
+                old_likelihood);
+            log_convergence(iteration, likelihood, delta_likelihood);
         } else if (iteration % settings->conv_freq == 0) {
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
@@ -176,8 +189,8 @@ void SPF::learn() {
         time(&end_time);
         log_time(iteration, difftime(end_time, start_time));
 
-        if (converged && settings->final_pass) {
-            printf("final pass on all users\n.");
+        if (converged && settings->final_pass && !on_final_pass) {
+            printf("final pass on all users.\n");
             on_final_pass = true;
             converged = false;
 
