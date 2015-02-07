@@ -185,7 +185,7 @@ class SPF {
         fmat a_theta;
         fmat b_theta;
         fmat a_beta;
-        sp_fmat a_beta_user;
+        fmat a_beta_user;
         fmat a_beta_old;
         fmat b_beta;
     

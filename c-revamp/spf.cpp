@@ -24,7 +24,7 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     beta  = fmat(settings->k, data->item_count());
     logbeta  = fmat(settings->k, data->item_count());
     a_beta  = fmat(settings->k, data->item_count());
-    a_beta_user = sp_fmat(settings->k, data->item_count());
+    a_beta_user = fmat(settings->k, data->item_count());
     b_beta  = fmat(settings->k, data->item_count());
    
     // keep track of old a_beta for SVI
