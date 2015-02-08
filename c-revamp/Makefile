@@ -11,6 +11,7 @@ CC = g++ -O3 -larmadillo -lgsl -Wall
 #GSL_LIB_MAC = /usr/local/lib/
 
 LSOURCE = main.cpp utils.cpp data.cpp spf.cpp
+PSOURCE = popularity.cpp utils.cpp data.cpp
 #LSOURCE = main.cpp utils.cpp corpus.cpp ctr.cpp data.cpp opt.cpp
 #LHEADER = utils.h corpus.h ctr.h data.h opt.h
 
@@ -29,11 +30,11 @@ spf: $(LSOURCE)
 profile: $(LSOURCE)
 	  $(CC) $(LSOURCE) -o spf -pg
 
-example: example.cpp
-	  $(CC) example.cpp -o example -pg
+pop: $(PSOURCE)
+	  $(CC) $(PSOURCE) -o pop
 
 #linux-d: $(LSOURCE) $(HEADER)
 #	  $(CC) -g -I$(GSL_INCLUDE) -L$(GSL_LIB_MAC) $(LSOURCE) -o ctr-condor $@ $(LDFLAGS)
 
 clean:
-	-rm -f example spf
+	-rm -f pop spf
