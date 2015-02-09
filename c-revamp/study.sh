@@ -35,3 +35,27 @@ echo "   that will continue living after this bash script has completed)"
 (./spf --data $1 --out $2/pf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &)
 (./spf --data $1 --out $2/sf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &)
 (./pop --data $1 --out $2/pop > $2/pop/out 2> $2/pop/err &)
+
+echo ""
+echo "*** it's okay if this script fails beyond this point ***"
+echo " * trying to build code for a baseline"
+#mkdir ctr; cd ctr; wget http://www.cs.cmu.edu/~chongw/software/ctr.tar.gz; tar -xvzf ctr.tar.gz; cd ../
+cd ctr; make; cd ../
+
+echo " * reformatting input for baseline"
+python mkdat/to_list_form.py $1
+python mkdat/to_sorec_list_form.py $1
+
+echo " * running baselines"
+mkdir $2/MF
+mkdir $2/SoRec
+./ctr/ctr --directory $2/MF --user $1/users.dat --item $1/items.dat --num_factors $K --b 1 --random_seed $seed #--lambda_u 0 --lambda_v 0
+./ctr/ctr --directory $2/SoRec --user $1/users_sorec.dat --item $1/items_sorec.dat --num_factors $K --b 1 --random_seed $seed #--lambda_u 0 --lambda_v 0
+
+echo " * evaluating baselines"
+python eval/pred-n-rank_ctr.py $1 $2/MF $K
+python eval/pred-n-rank_sorec.py $1 $2/SoRec $K
+python eval/eval.py $2/MF/rankings.out $2/MF
+python eval/eval.py $2/SoRec/rankings.out $2/SoRec
+
+echo "all done!"
