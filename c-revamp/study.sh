@@ -40,7 +40,7 @@ echo ""
 echo "*** it's okay if this script fails beyond this point ***"
 echo " * trying to build code for a baseline"
 #mkdir ctr; cd ctr; wget http://www.cs.cmu.edu/~chongw/software/ctr.tar.gz; tar -xvzf ctr.tar.gz; cd ../
-cd ctr; make; cd ../
+#cd ctr; make; cd ../
 
 echo " * reformatting input for baseline"
 python mkdat/to_list_form.py $1
@@ -53,9 +53,8 @@ mkdir $2/SoRec
 ./ctr/ctr --directory $2/SoRec --user $1/users_sorec.dat --item $1/items_sorec.dat --num_factors $K --b 1 --random_seed $seed #--lambda_u 0 --lambda_v 0
 
 echo " * evaluating baselines"
-python eval/pred-n-rank_ctr.py $1 $2/MF $K
-python eval/pred-n-rank_sorec.py $1 $2/SoRec $K
-python eval/eval.py $2/MF/rankings.out $2/MF
-python eval/eval.py $2/SoRec/rankings.out $2/SoRec
+make mf
+./mf --data $1 --out $2/MF --K $K
+./mf --data $1 --out $2/SoRec --K $K
 
 echo "all done!"
