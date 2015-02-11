@@ -31,6 +31,9 @@ make pop
 echo " * initializing study of main model (this will launch multiple processes"
 echo "   that will continue living after this bash script has completed)"
 
+#(./spf --data $1 --out $2/spf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &)
+#(./spf --data $1 --out $2/pf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &)
+#(./spf --data $1 --out $2/sf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &)
 (./spf --data $1 --out $2/spf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &)
 (./spf --data $1 --out $2/pf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &)
 (./spf --data $1 --out $2/sf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &)
@@ -59,10 +62,12 @@ make mf
 
 
 echo "\n * getting code for librec comparisons"
-#mkdir librec; cd librec; wget http://www.librec.net/release/librec-v1.1.zip; unzip librec-v1.1.zip; cd ../
-#git clone https://github.com/guoguibing/librec.git librec
-#not quite right:
-#jar -cf librec.jar .
+#mkdir librec; cd librec
+#wget http://www.librec.net/release/librec-v1.2-rc1.zip
+#unzip librec-v1.2-rc1.zip
+#cd ../
+
+jar -cf librec.jar .
 
 
 echo "all done!"

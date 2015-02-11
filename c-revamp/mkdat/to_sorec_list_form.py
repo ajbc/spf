@@ -46,8 +46,8 @@ for line in finn:
     item_data[len(imap) + umap[friend]].append(umap[user])
 
     # undirected
-    user_data[umap[friend]].append(len(imap) + umap[user])
-    item_data[len(imap) + umap[user]].append(umap[friend])
+    #user_data[umap[friend]].append(len(imap) + umap[user])
+    #item_data[len(imap) + umap[user]].append(umap[friend])
 
 for item in sorted(items, key=lambda x: imap[x]):
     line = str(len(item_data[imap[item]]))

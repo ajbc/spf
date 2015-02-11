@@ -19,7 +19,10 @@ pop: popularity.cpp $(CSOURCE)
 mf: mf.cpp $(CSOURCE)
 	  $(CC) mf.cpp $(CSOURCE) -o mf
 
+librec: librec.cpp $(CSOURCE)
+	  $(CC) librec.cpp $(CSOURCE) -o librec
+
 
 # cleanup
 clean:
-	-rm -f spf pop mf
+	-rm -f spf pop mf librec
