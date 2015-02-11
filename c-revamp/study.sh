@@ -38,23 +38,31 @@ echo "   that will continue living after this bash script has completed)"
 
 echo ""
 echo "*** it's okay if this script fails beyond this point ***"
-echo " * trying to build code for a baseline"
+echo " * trying to build code for Gaussian MF comparison"
 #mkdir ctr; cd ctr; wget http://www.cs.cmu.edu/~chongw/software/ctr.tar.gz; tar -xvzf ctr.tar.gz; cd ../
 #cd ctr; make; cd ../
 
-echo " * reformatting input for baseline"
+echo " * reformatting input for MF comparisons"
 python mkdat/to_list_form.py $1
 python mkdat/to_sorec_list_form.py $1
 
-echo " * running baselines"
+echo " * fitting MF comparisons"
 mkdir $2/MF
 mkdir $2/SoRec
 ./ctr/ctr --directory $2/MF --user $1/users.dat --item $1/items.dat --num_factors $K --b 1 --random_seed $seed #--lambda_u 0 --lambda_v 0
 ./ctr/ctr --directory $2/SoRec --user $1/users_sorec.dat --item $1/items_sorec.dat --num_factors $K --b 1 --random_seed $seed #--lambda_u 0 --lambda_v 0
 
-echo " * evaluating baselines"
+echo " * evaluating MF comparisons"
 make mf
 ./mf --data $1 --out $2/MF --K $K
 ./mf --data $1 --out $2/SoRec --K $K
+
+
+echo "\n * getting code for librec comparisons"
+#mkdir librec; cd librec; wget http://www.librec.net/release/librec-v1.1.zip; unzip librec-v1.1.zip; cd ../
+#git clone https://github.com/guoguibing/librec.git librec
+#not quite right:
+#jar -cf librec.jar .
+
 
 echo "all done!"
