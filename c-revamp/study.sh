@@ -80,7 +80,17 @@ echo "\n * getting code for librec comparisons"
 #unzip librec-v1.2-rc1.zip
 #cd ../
 
-jar -cf librec.jar .
+echo "\n * getting data ready for librec comparisons"
+if [ "$directed" = "directed" ]; then
+    # directed
+    python mkdat/to_librec_form.py $1
+else
+    # undirected
+    python mkdat/to_librec_form.py $1 undir
+fi
 
+echo " * fitting librec comparisons"
+# config files!! (TODO)
+java -jar librec.jar
 
 echo "all done!"
