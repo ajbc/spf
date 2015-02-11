@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
-    echo "usage: ./study [data-dir] [output-dir] [K]"
+if [ "$#" -ne 4 ]; then
+    echo "usage: ./study [data-dir] [output-dir] [K] [directed/undirected]"
     exit
 fi
 
@@ -9,6 +9,7 @@ fi
 datadir=$1
 outdir=$2
 K=$3
+directed=$4
 
 echo "creating directory structure"
 if [ -d $2 ]; then
@@ -31,12 +32,18 @@ make pop
 echo " * initializing study of main model (this will launch multiple processes"
 echo "   that will continue living after this bash script has completed)"
 
-#(./spf --data $1 --out $2/spf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &)
-#(./spf --data $1 --out $2/pf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &)
-#(./spf --data $1 --out $2/sf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &)
-(./spf --data $1 --out $2/spf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &)
-(./spf --data $1 --out $2/pf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &)
-(./spf --data $1 --out $2/sf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &)
+if [ "$directed" = "directed" ]; then
+    # directed
+    (./spf --data $1 --out $2/spf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &)
+    (./spf --data $1 --out $2/pf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &)
+    (./spf --data $1 --out $2/sf --binary --directed --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &)
+else
+    # undirected
+    (./spf --data $1 --out $2/spf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &)
+    (./spf --data $1 --out $2/pf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &)
+    (./spf --data $1 --out $2/sf --binary --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &)
+fi
+
 (./pop --data $1 --out $2/pop > $2/pop/out 2> $2/pop/err &)
 
 echo ""
@@ -47,7 +54,13 @@ echo " * trying to build code for Gaussian MF comparison"
 
 echo " * reformatting input for MF comparisons"
 python mkdat/to_list_form.py $1
-python mkdat/to_sorec_list_form.py $1
+if [ "$directed" = "directed" ]; then
+    # directed
+    python mkdat/to_sorec_list_form.py $1
+else
+    # undirected
+    python mkdat/to_sorec_list_form.py $1 undir
+fi
 
 echo " * fitting MF comparisons"
 mkdir $2/MF
