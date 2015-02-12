@@ -73,14 +73,18 @@ make mf
 ./mf --data $1 --out $2/MF --K $K
 ./mf --data $1 --out $2/SoRec --K $K
 
+mv $2/SoRec $2/SoRec-ctr
 
-echo "\n * getting code for librec comparisons"
+echo ""
+echo " * getting code for librec comparisons"
 #mkdir librec; cd librec
 #wget http://www.librec.net/release/librec-v1.2-rc1.zip
 #unzip librec-v1.2-rc1.zip
 #cd ../
+make librec
 
-echo "\n * getting data ready for librec comparisons"
+echo ""
+echo " * getting data ready for librec comparisons"
 if [ "$directed" = "directed" ]; then
     # directed
     python mkdat/to_librec_form.py $1
@@ -91,6 +95,34 @@ fi
 
 echo " * fitting librec comparisons"
 # config files!! (TODO)
-java -jar librec.jar
+for model in SoRec SocialMF TrustMF SoReg RSTE PMF TrustSVD MostPop BiasedMF
+do
+    echo $model
+    echo "dataset.training.lins=$1/ratings.dat" > tmp
+    echo "dataset.social.lins=$1/network.dat" >> tmp
+    echo "dataset.testing.lins=$1/test.dat" >> tmp
+    echo "recommender=$model" >> tmp
+    echo "num.factors=$K" >> tmp
+    if [ "$model" = "TrustSVD" ]; then
+        echo "num.max.iter=50" >> tmp
+    else
+        echo "num.max.iter=100" >> tmp
+    fi
+    cat tmp conf/base.conf > conf/tmp.conf
+    echo ""
+    echo "CONF"
+    head conf/tmp.conf
+    echo ""
+    java -jar librec/librec.jar -c conf/tmp.conf
+    mkdir $2/$model
+    tail -n +2 Results/$model*prediction.txt > $2/$model/ratings.dat
+
+    LINECOUNT=`wc -l $2/$model/ratings.dat | cut -f1 -d' '`
+
+    if [[ $LINECOUNT != 0 ]]; then
+        ./librec_eval --data $1 --out $2/$model
+    fi
+done
+
 
 echo "all done!"

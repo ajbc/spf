@@ -80,9 +80,6 @@ int main(int argc, char* argv[]) {
             case 'd':
                 datadir = optarg;
                 break;
-            case 'k':
-                K = atoi(optarg);
-                break;
             case -1:
                 break;
             case '?':
@@ -156,14 +153,14 @@ int main(int argc, char* argv[]) {
 
     // read in the ratings
     printf("starting to read ratings\n");
-    map<int,map<int,float>> preds;
+    map<int,map<int,float> > preds;
 
     int user, item;
     float r, prediction;
 
-    FILE* fileptr = fopen((outdir+"/final-U.dat").c_str(), "r");
-    printf("bout to read theta from %s\n", (outdir+"/final-U.dat").c_str());
-    while (fscanf(fileptr, "%d %d %f %f", &user, &item, &r, &value) != EOF) {
+    FILE* fileptr = fopen((outdir+"/ratings.dat").c_str(), "r");
+    printf("about to read ratings from %s\n", (outdir+"/ratings.dat").c_str());
+    while (fscanf(fileptr, "%d %d %f %f\n", &user, &item, &r, &prediction) != EOF) {
         preds[user][item] = prediction;
     }
     fclose(fileptr);

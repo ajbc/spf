@@ -9,13 +9,13 @@ items = set()
 fout = open(path +'/ratings.dat', 'w+')
 for line in open(path + '/train.tsv'):
     user, item, rating = [int(x.strip()) for x in line.split('\t')]
-    fout.write("%d %d %d\n" % (user, item, rating))
+    fout.write("%d\t%d\t%d\n" % (user, item, rating))
     items.add(item)
     users.add(user)
 for line in open(path + '/validation.tsv'):
     user, item, rating = [int(x.strip()) for x in line.split('\t')]
     if user in users and item in items:
-        fout.write("%d %d %d\n" % (user, item, rating))
+        fout.write("%d\t%d\t%d\n" % (user, item, rating))
 fout.close()
 test_users = set()
 test_items = set()
@@ -30,16 +30,16 @@ for line in open(path + '/test.tsv'):
 for user in test_users:
     for item in test_items:
         if (user,item) in ratings:
-            fout.write("%d %d %d\n" % (user, item, rating))
+            fout.write("%d\t%d\t%d\n" % (user, item, rating))
         else:
-            fout.write("%d %d 0\n" % (user, item))
+            fout.write("%d\t%d\t0\n" % (user, item))
 fout.close()
 
 fout = open(path +'/network.dat', 'w+')
 for line in open(path + '/network.tsv'):
     user, friend = [int(x.strip()) for x in line.split('\t')]
     if user in users and friend in users:
-        fout.write("%d %d 1\n" % (user, friend))
+        fout.write("%d\t%d\t1\n" % (user, friend))
         if undir:
-            fout.write("%d %d 1\n" % (friend, user))
+            fout.write("%d\t%d\t1\n" % (friend, user))
 fout.close()

@@ -20,9 +20,9 @@ mf: mf.cpp $(CSOURCE)
 	  $(CC) mf.cpp $(CSOURCE) -o mf
 
 librec: librec.cpp $(CSOURCE)
-	  $(CC) librec.cpp $(CSOURCE) -o librec
+	  $(CC) librec.cpp $(CSOURCE) -o librec_eval
 
 
 # cleanup
 clean:
-	-rm -f spf pop mf librec
+	-rm -f spf pop mf librec_eval
