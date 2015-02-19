@@ -36,10 +36,13 @@ void print_usage_and_exit() {
     printf("  --b_beta {b}      rate hyperparamter to beta (item attributes); default 0.3\n");
     printf("  --a_tau {a}       shape hyperparamter to tau (user influence); default 2\n");
     printf("  --b_tau {b}       rate hyperparamter to tau (user influence); default 5\n");
+    printf("  --a_delta {a}     shape hyperparamter to delta (item bias); default 0.3\n");
+    printf("  --b_delta {b}     rate hyperparamter to delta (item bias); default 0.3\n");
   
     printf("\n");
     printf("  --social-only     only consider social aspect of factorization (SF)\n");
     printf("  --factor-only     only consider general factors (no social; PF)\n");
+    printf("  --bias            include a bias term for each item\n");
 
     printf("\n");
     printf("  --binary          assume ratings are binary (instead of default integer)\n");
@@ -88,10 +91,13 @@ int main(int argc, char* argv[]) {
     double b_beta = 0.3;
     double a_tau = 2;
     double b_tau = 5;
+    double a_delta = 0.3;
+    double b_delta = 0.3;
 
     // these are really bools, but typed as integers to play nice with getopt
     int social_only = 0;
     int factor_only = 0;
+    bool item_bias = 0;
     int binary = 0;
     int directed = 0;
     bool final_pass = 0;
@@ -112,7 +118,7 @@ int main(int argc, char* argv[]) {
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "hqo:d:vb1:2:3:4:5:6:s:7:8:9:x:m:c:a:e:f:pk:";
+    const char* const short_options = "hqo:d:vb1:2:3:4:5:6:7:8:is:w:j:g:x:m:c:a:e:f:pk:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
         {"verbose",         no_argument,       NULL, 'q'},
@@ -126,14 +132,18 @@ int main(int argc, char* argv[]) {
         {"b_beta",          required_argument, NULL, '4'},
         {"a_tau",           required_argument, NULL, '5'},
         {"b_tau",           required_argument, NULL, '6'},
+        {"a_delta",         required_argument, NULL, '7'},
+        {"b_delta",         required_argument, NULL, '8'},
+        {"social_only",     no_argument, &social_only, 1},
         {"social_only",     no_argument, &social_only, 1},
         {"factor_only",     no_argument, &factor_only, 1},
+        {"bias",            no_argument, NULL, 'i'},
         {"binary",          no_argument, &binary, 1},
         {"directed",        no_argument, &directed, 1},
         {"seed",            required_argument, NULL, 's'},
-        {"save_freq",       required_argument, NULL, '7'},
-        {"eval_freq",       required_argument, NULL, '8'},
-        {"conv_freq",       required_argument, NULL, '9'},
+        {"save_freq",       required_argument, NULL, 'w'},
+        {"eval_freq",       required_argument, NULL, 'j'},
+        {"conv_freq",       required_argument, NULL, 'g'},
         {"max_iter",        required_argument, NULL, 'x'},
         {"min_iter",        required_argument, NULL, 'm'},
         {"converge",        required_argument, NULL, 'c'},
@@ -185,16 +195,25 @@ int main(int argc, char* argv[]) {
             case '6':
                 b_tau = atof(optarg);
                 break;
+            case '7':
+                a_delta = atof(optarg);
+                break;
+            case '8':
+                b_delta = atof(optarg);
+                break;
+            case 'i':
+                item_bias = true;
+                break;
             case 's':
                 seed = atoi(optarg);
                 break;
-            case '7':
+            case 'w':
                 save_freq = atoi(optarg);
                 break;
-            case '8':
+            case 'j':
                 eval_freq = atoi(optarg);
                 break;
-            case '9':
+            case 'g':
                 conv_freq = atoi(optarg);
                 break;
             case 'x':
@@ -310,6 +329,9 @@ int main(int argc, char* argv[]) {
     if (!factor_only) {
         printf("\ttau   (%.2f, %.2f)\n", a_tau, b_tau);
     }
+    if (item_bias) {
+        printf("\tdelta (%.2f, %.2f)\n", a_delta, b_delta);
+    }
     
 
     printf("\ndata attributes:\n");
@@ -353,7 +375,8 @@ int main(int argc, char* argv[]) {
 
     model_settings settings;
     settings.set(verbose, out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
-        (bool) social_only, (bool) factor_only, (bool) binary, (bool) directed,
+        a_delta, b_delta,
+        (bool) social_only, (bool) factor_only, item_bias, (bool) binary, (bool) directed,
         seed, save_freq, eval_freq, conv_freq, max_iter, min_iter, converge_delta,
         final_pass, sample_size, svi_delay, svi_forget, k);
 

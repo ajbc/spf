@@ -21,17 +21,22 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     // item attributes
     printf("\tinitializing item attributes (beta)\n");
     printf("\t%d users and %d items\n", data->user_count(), data->item_count());
-    beta  = fmat(settings->k, data->item_count());
-    logbeta  = fmat(settings->k, data->item_count());
-    a_beta  = fmat(settings->k, data->item_count());
+    beta = fmat(settings->k, data->item_count());
+    logbeta = fmat(settings->k, data->item_count());
+    a_beta = fmat(settings->k, data->item_count());
     a_beta_user = fmat(settings->k, data->item_count());
-    b_beta  = fmat(settings->k, data->item_count());
+    b_beta = fmat(settings->k, data->item_count());
+
+    delta = fvec(data->item_count());
+    a_delta = fvec(data->item_count());
+    b_delta = settings->b_delta + data->user_count();
+    a_delta_user = fvec(data->item_count());
    
-    // keep track of old a_beta for SVI
-    if (settings->svi) {
-        a_beta_old  = fmat(settings->k, data->item_count());
-        a_beta_old.fill(settings->a_beta);
-    }
+    // keep track of old a_beta and a_delta for SVI
+    a_beta_old  = fmat(settings->k, data->item_count());
+    a_beta_old.fill(settings->a_beta);
+    a_delta_old = fvec(data->item_count());
+    a_delta_old.fill(settings->a_delta);
     
     printf("\tsetting random seed\n");
     rand_gen = gsl_rng_alloc(gsl_rng_taus);
@@ -75,6 +80,7 @@ void SPF::learn() {
             while (!user_converged) {
                 user_iters++;
                 a_beta_user.zeros();
+                a_delta_user.zeros();
 
                 // look at all the user's items
                 for (int j = 0; j < data->item_count(user); j++) {
@@ -108,6 +114,7 @@ void SPF::learn() {
             if (settings->verbose)
                 printf("%d\tuser %d took %d iters to converge\n", iteration, user, user_iters);
             a_beta += a_beta_user;
+            a_delta += a_delta_user;
         }
     
         if (!settings->social_only) {
@@ -122,6 +129,8 @@ void SPF::learn() {
                     iter_count[item] = 0;
                 iter_count[item]++;
                 update_beta(item);
+                if (settings->item_bias)
+                    update_delta(item);
             }
         }
 
@@ -211,6 +220,8 @@ double SPF::predict(int user, int item) {
     prediction += accu(tau.col(user) % data->ratings.col(item));
     if (!settings->social_only)
         prediction += accu(theta.col(user) % beta.col(item));
+    if (settings->item_bias)
+        prediction += delta[item];
 
     return prediction;
 }
@@ -239,9 +250,8 @@ void SPF::evaluate(string label, bool write_rankings) {
     time_t start_time, end_time;
     time(&start_time);
     
-    FILE* file;
+    FILE* file = fopen((settings->outdir+"/rankings_"+label+".tsv").c_str(), "w");
     if (write_rankings) {
-        file = fopen((settings->outdir+"/rankings_"+label+".tsv").c_str(), "w");
         fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
     }
     // TODO: add likelihood here
@@ -391,8 +401,7 @@ void SPF::evaluate(string label, bool write_rankings) {
         user_sum_ndcg += user_ndcg;
     }
     fclose(user_file);
-    if (write_rankings)
-        fclose(file);
+    fclose(file);
     
     
     // write out results
@@ -458,6 +467,7 @@ void SPF::initialize_parameters() {
                 logbeta(k, item) = log(beta(k, item));
             }
             beta.col(item) /= accu(beta.col(item));
+            delta(item) = 1.0;
         }
     }
 }
@@ -469,6 +479,7 @@ void SPF::reset_helper_params() {
     b_theta.fill(settings->b_theta);
     a_beta.fill(settings->a_beta);
     b_beta.fill(settings->b_beta);
+    a_delta.fill(settings->a_delta);
 }
 
 void SPF::save_parameters(string label) {
@@ -521,11 +532,17 @@ void SPF::update_shape(int user, int item, int rating) {
     double phi_sum = accu(phi_SF);
 
     fmat phi_MF;
+    float phi_B = 0;
     // we don't need to do a similar check for factor only because
     // sparse matrices play nice when empty
     if (!settings->social_only) {
         phi_MF = exp(logtheta.col(user) + logbeta.col(item));
         phi_sum += accu(phi_MF);
+    }
+
+    if (settings->item_bias) {
+        phi_B = delta(item);
+        phi_sum += phi_B;
     }
 
     if (phi_sum == 0)
@@ -543,7 +560,11 @@ void SPF::update_shape(int user, int item, int rating) {
     if (!settings->social_only) {
         phi_MF /= phi_sum * rating;
         a_theta.col(user) += phi_MF;
-        a_beta_user.col(item)  += phi_MF * scale;
+        a_beta_user.col(item) += phi_MF * scale;
+    }
+
+    if (settings->item_bias) {
+        a_delta(item) += (phi_B / phi_sum) * scale;
     }
 }
 
@@ -593,6 +614,16 @@ void SPF::update_beta(int item) {
     logbeta(item) = logbeta(item) - log(b_beta(item));
 }
 
+void SPF::update_delta(int item) {
+    if (settings->svi) {
+        double rho = pow(iter_count[item] + settings->delay, 
+            -1 * settings->forget);
+        a_delta(item) = (1 - rho) * a_delta_old(item) + rho * a_delta(item);
+        a_delta_old(item) = a_delta(item);
+    }
+    delta(item) = a_delta(item) / b_delta;
+}
+
 double SPF::get_ave_log_likelihood() {
     double prediction, likelihood = 0;
     int user, item, rating;
@@ -625,5 +656,5 @@ void SPF::log_time(int iteration, double duration) {
 void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
     double rank, int first, double crr, double ncrr, double ndcg) {
     fprintf(file, "%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
-        rmse, mae, rank, first, crr, ncrr, ndcg, );
+        rmse, mae, rank, first, crr, ncrr, ndcg);
 }

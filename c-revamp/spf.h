@@ -23,9 +23,12 @@ struct model_settings {
     double b_beta;
     double a_tau;
     double b_tau;
+    double a_delta;
+    double b_delta;
 
     bool social_only;
     bool factor_only;
+    bool item_bias;
     bool binary;
     bool directed;
     
@@ -48,8 +51,8 @@ struct model_settings {
     
     void set(bool print, string out, string data, bool use_svi,
              double athe, double bthe, double abet, double bbet, 
-             double atau, double btau,
-             bool social, bool factor, bool bin, bool dir,
+             double atau, double btau, double adelta, double bdelta,
+             bool social, bool factor, bool bias, bool bin, bool dir,
              long rand, int savef, int evalf, int convf, 
              int iter_max, int iter_min, double delta,
              bool finalpass, int sample, double svi_delay, double svi_forget,
@@ -67,9 +70,12 @@ struct model_settings {
         b_beta  = bbet;
         a_tau   = atau;
         b_tau   = btau;
+        a_delta = adelta;
+        b_delta = bdelta;
 
         social_only = social;
         factor_only = factor;
+        item_bias = bias;
         binary = bin;
         directed = dir;
 
@@ -122,6 +128,9 @@ struct model_settings {
         }
         if (!factor_only) {
             fprintf(file, "\ttau   (%f, %f)\n", a_tau, b_tau);
+        }
+        if (item_bias) {
+            fprintf(file, "\tdelta (%.2f, %.2f)\n", a_delta, b_delta);
         }
         
 
@@ -178,6 +187,7 @@ class SPF {
         fmat beta;   // item attributes
         fmat logtheta;  // log variant of above
         fmat logbeta;   // ditto
+        fvec delta;
 
         // helper parameters
         sp_fmat a_tau;
@@ -188,6 +198,10 @@ class SPF {
         fmat a_beta_user;
         fmat a_beta_old;
         fmat b_beta;
+        fvec a_delta;
+        float b_delta;
+        fvec a_delta_user;
+        fvec a_delta_old;
     
         // random number generator
         gsl_rng* rand_gen;
@@ -201,6 +215,7 @@ class SPF {
         double update_tau(int user);
         double update_theta(int user);
         void update_beta(int item);
+        void update_delta(int item);
 
         double get_ave_log_likelihood();
         void log_convergence(int iteration, double ave_ll, double delta_ll);
