@@ -247,7 +247,7 @@ void SPF::evaluate(string label, bool write_rankings) {
     // TODO: add likelihood here
     
     FILE* user_file = fopen((settings->outdir+"/user_eval_"+label+".tsv").c_str(), "w");
-    fprintf(user_file, "user.map\tuser.id\tnum.heldout\tnum.train\tdegree\tconnectivity\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
+    fprintf(user_file, "user.map\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
     
     // overall metrics to track
     double rmse = 0;
@@ -624,15 +624,6 @@ void SPF::log_time(int iteration, double duration) {
 
 void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
     double rank, int first, double crr, double ncrr, double ndcg) {
-    if (settings->factor_only) {
-        fprintf(file, "%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
-            data->user_id(user), heldout, data->item_count(user), 
-            rmse, mae, rank, first, crr, ncrr, ndcg);
-    
-    } else {
-        fprintf(file, "%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
-            data->user_id(user), heldout, data->item_count(user), 
-            data->neighbor_count(user), data->connectivity(user), 
-            rmse, mae, rank, first, crr, ncrr, ndcg);
-    }
+    fprintf(file, "%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
+        rmse, mae, rank, first, crr, ncrr, ndcg, );
 }

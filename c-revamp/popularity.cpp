@@ -27,8 +27,9 @@ void print_usage_and_exit() {
 // helper function to write out per-user info
 void log_user(FILE* file, Data *data, int user, int heldout, double rmse, double mae,
     double rank, int first, double crr, double ncrr, double ndcg) {
-    fprintf(file, "%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
+    fprintf(file, "%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
         data->user_id(user), heldout, data->item_count(user), 
+        data->neighbor_count(user), data->connectivity(user), 
         rmse, mae, rank, first, crr, ncrr, ndcg);
     return;
 }
