@@ -141,12 +141,6 @@ int main(int argc, char* argv[]) {
     data->read_validation(datadir + "/validation.tsv");
     printf("done\n");
     
-    printf("\tsaving data stats\t\t...\t");
-    data->save_summary(outdir + "/data_stats.txt");
-    printf("done\n");
-    
-    printf("********************************************************************************\n");
-    printf("commencing model evaluation\n");
     if (!file_exists(datadir + "/test.tsv")) {
         printf("testing data file (test.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
@@ -155,6 +149,12 @@ int main(int argc, char* argv[]) {
     data->read_test(datadir + "/test.tsv");
     printf("done\n");
     
+    printf("\tsaving data stats\t\t...\t");
+    data->save_summary(outdir + "/data_stats.txt");
+    printf("done\n");
+    
+    printf("********************************************************************************\n");
+    printf("commencing model evaluation\n");
     
     // test the final model fit
     printf("evaluating model on held-out data\n");
