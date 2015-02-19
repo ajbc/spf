@@ -94,6 +94,7 @@ class Data {
         set<int> test_users;
         set<int> test_items;
         sp_umat test_ratings;
+        int num_test();
         int num_test(int user);
 };
 

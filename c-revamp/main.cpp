@@ -396,6 +396,15 @@ int main(int argc, char* argv[]) {
     printf("\treading validation data\t\t...\t");
     dataset->read_validation(settings.datadir + "/validation.tsv");
     printf("done\n");
+    
+    if (!file_exists(data + "/test.tsv")) {
+        printf("testing data file (test.tsv) doesn't exist!  Exiting.\n");
+        exit(-1);
+    }
+    printf("reading testing data\t\t...\t");
+    dataset->read_test(settings.datadir + "/test.tsv");
+    printf("done\n");
+    
     printf("\tsaving data stats\t\t...\t");
     dataset->save_summary(out + "/data_stats.txt");
     printf("done\n");
@@ -420,13 +429,6 @@ int main(int argc, char* argv[]) {
     // TODO: make this/evaluate below optional (--test_only, --no_test)
     printf("********************************************************************************\n");
     printf("commencing model evaluation\n");
-    if (!file_exists(data + "/test.tsv")) {
-        printf("testing data file (test.tsv) doesn't exist!  Exiting.\n");
-        exit(-1);
-    }
-    printf("reading testing data\t\t...\t");
-    dataset->read_test(settings.datadir + "/test.tsv");
-    printf("done\n");
     
     // create model instance; learn!
     printf("\ncreating model instance\n");

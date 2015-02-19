@@ -161,6 +161,7 @@ void Data::read_test(string filename) {
         
         test_ratings(u, i) = rating;
         test_count[u]++;
+        test_count[-1]++;
     }
 
     fclose(fileptr);
@@ -171,7 +172,7 @@ void Data::save_summary(string filename) {
     
     fprintf(file, "num users:\t%d\n", user_count());
     fprintf(file, "num items:\t%d\n", item_count());
-    fprintf(file, "num ratings:\t%d\t%d\n", num_training(), num_validation());
+    fprintf(file, "num ratings:\t%d\t%d\t%d\n", num_training(), num_validation(), num_test());
 
     if (has_network) {
         int nc = 0;
@@ -287,6 +288,10 @@ bool Data::in_validation(int user, int item) {
 }
 
 // test data
+int Data::num_test() {
+   return test_count[-1];
+}
+
 int Data::num_test(int user) {
     return test_count[user];
 }
