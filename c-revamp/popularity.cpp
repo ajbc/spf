@@ -137,6 +137,11 @@ int main(int argc, char* argv[]) {
     data->read_ratings(datadir + "/train.tsv");
     printf("done\n");
 
+    // read in the network for data stats only
+    printf("\treading network data\t\t...\t");
+    data->read_network(datadir + "/network.tsv");
+    printf("done\n");
+
     printf("\treading validation data\t\t...\t");
     data->read_validation(datadir + "/validation.tsv");
     printf("done\n");
@@ -145,7 +150,7 @@ int main(int argc, char* argv[]) {
         printf("testing data file (test.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
     }
-    printf("reading testing data\t\t...\t");
+    printf("\treading testing data\t\t...\t");
     data->read_test(datadir + "/test.tsv");
     printf("done\n");
     
@@ -203,7 +208,7 @@ int main(int argc, char* argv[]) {
     int user, item, rating, rank;
     list<pair<pair<double, int>, int> > ratings;
     int total_pred = 0;
-    
+   
     for (set<int>::iterator iter_user = data->test_users.begin(); 
         iter_user != data->test_users.end();
         iter_user++){

@@ -34,19 +34,19 @@ echo "   that will continue living after this bash script has completed)"
 
 if [ "$directed" = "directed" ]; then
     # directed
-    ((time ./spf --data $1 --out $2/spf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &) > $2/spf/time.out 2> $2/spf/time.err &)
-    ((time ./spf --data $1 --out $2/pf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &) > $2/pf/time.out 2> $2/pf/time.err &)
-    ((time ./spf --data $1 --out $2/sf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &) > $2/sf/time.out 2> $2/sf/time.err &)
+    ((time ./spf --data $1 --out $2/spf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $2/spf/out 2> $2/spf/err &) > $2/spf/time.out 2> $2/spf/time.err &)
+    ((time ./spf --data $1 --out $2/pf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $2/pf/out 2> $2/pf/err &) > $2/pf/time.out 2> $2/pf/time.err &)
+    ((time ./spf --data $1 --out $2/sf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $2/sf/out 2> $2/sf/err &) > $2/sf/time.out 2> $2/sf/time.err &)
 else
     # undirected
-    ((time ./spf --data $1 --out $2/spf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 100 --max_iter 9999 --final_pass > $2/spf/out 2> $2/spf/err &) > $2/spf/time.out 2> $2/spf/time.err &)
-    ((time ./spf --data $1 --out $2/pf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 100 --max_iter 9999 --final_pass > $2/pf/out 2> $2/pf/err &) > $2/pf/time.out 2> $2/pf/time.err &)
-    ((time ./spf --data $1 --out $2/sf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 100 --max_iter 9999 --final_pass > $2/sf/out 2> $2/sf/err &) > $2/sf/time.out 2> $2/sf/time.err &)
+    ((time ./spf --data $1 --out $2/spf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $2/spf/out 2> $2/spf/err &) > $2/spf/time.out 2> $2/spf/time.err &)
+    ((time ./spf --data $1 --out $2/pf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $2/pf/out 2> $2/pf/err &) > $2/pf/time.out 2> $2/pf/time.err &)
+    ((time ./spf --data $1 --out $2/sf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $2/sf/out 2> $2/sf/err &) > $2/sf/time.out 2> $2/sf/time.err &)
 fi
 
-((./pop --data $1 --out $2/pop > $2/pop/out 2> $2/pop/err &) > $2/pop/time.out 2> $2/pop/time.err &)
-exit
+(./pop --data $1 --out $2/pop > $2/pop/out 2> $2/pop/err &)
 
+exit
 echo ""
 echo "*** it's okay if this script fails beyond this point ***"
 echo " * trying to build code for Gaussian MF comparison"

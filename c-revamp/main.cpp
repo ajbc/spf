@@ -401,7 +401,7 @@ int main(int argc, char* argv[]) {
         printf("testing data file (test.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
     }
-    printf("reading testing data\t\t...\t");
+    printf("\treading testing data\t\t...\t");
     dataset->read_test(settings.datadir + "/test.tsv");
     printf("done\n");
     

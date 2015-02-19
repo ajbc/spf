@@ -220,8 +220,9 @@ double SPF::predict(int user, int item) {
     prediction += accu(tau.col(user) % data->ratings.col(item));
     if (!settings->social_only)
         prediction += accu(theta.col(user) % beta.col(item));
-    if (settings->item_bias)
-        prediction += delta[item];
+    if (settings->item_bias) {
+        prediction += delta(item);
+    }
 
     return prediction;
 }
@@ -467,7 +468,7 @@ void SPF::initialize_parameters() {
                 logbeta(k, item) = log(beta(k, item));
             }
             beta.col(item) /= accu(beta.col(item));
-            delta(item) = 1.0;
+            delta(item) = data->popularity(item);
         }
     }
 }
