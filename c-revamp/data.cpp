@@ -161,6 +161,7 @@ void Data::read_test(string filename) {
         
         test_ratings(u, i) = rating;
         test_count[u]++;
+        test_count_item[i]++;
         test_count[-1]++;
     }
 
@@ -294,5 +295,9 @@ int Data::num_test() {
 
 int Data::num_test(int user) {
     return test_count[user];
+}
+
+int Data::num_test_item(int item) {
+    return test_count_item[item];
 }
 

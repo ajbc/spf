@@ -43,6 +43,7 @@ class Data {
         
         // test data
         map<int,int> test_count;
+        map<int,int> test_count_item;
 
         // for use in initializing the network data structures only
         bool has_connection_init(int user, int neighbor);
@@ -96,6 +97,7 @@ class Data {
         sp_umat test_ratings;
         int num_test();
         int num_test(int user);
+        int num_test_item(int item);
 };
 
 #endif
