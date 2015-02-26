@@ -1,7 +1,7 @@
 CC = g++ -O3 -larmadillo -lgsl -Wall
 
-LSOURCE = main.cpp utils.cpp data.cpp spf.cpp
-CSOURCE = utils.cpp data.cpp
+LSOURCE = main.cpp utils.cpp data.cpp spf.cpp eval.cpp
+CSOURCE = utils.cpp data.cpp eval.cpp
 
 
 # main model
