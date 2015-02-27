@@ -44,23 +44,24 @@ bool prediction_compare(const pair<double,int>& itemA,
 
 // take a prediction function as an argument
 void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Data* data, bool stats, 
-    unsigned long int seed, bool verbose) { 
+    unsigned long int seed, bool verbose, string label, bool write_rankings) { 
     // random generator to break ties
     gsl_rng_set(rand_gen, seed);
 
     // test the final model fit
     printf("evaluating model on held-out data\n");
     
-    FILE* file = fopen((outdir+"/rankings_final.tsv").c_str(), "w");
-    fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
+    FILE* file = fopen((outdir+"/rankings_" + label + ".tsv").c_str(), "w");
+    if (write_rankings)
+        fprintf(file, "user.map\tuser.id\titem.map\titem.id\tpred\trank\trating\n");
     
-    FILE* user_file = fopen((outdir+"/user_eval_final.tsv").c_str(), "w");
+    FILE* user_file = fopen((outdir+"/user_eval_" + label + ".tsv").c_str(), "w");
     if (stats)
         fprintf(user_file, "user.map\tuser.id\tnum.heldout\tnum.train\tdegree\tconnectivity\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
     else
         fprintf(user_file, "user.map\tuser.id\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
      
-    FILE* item_file = fopen((outdir+"/item_eval_final.tsv").c_str(), "w");
+    FILE* item_file = fopen((outdir+"/item_eval_" + label + ".tsv").c_str(), "w");
     fprintf(item_file, "item.map\titem.id\tpopularity\theldout\trmse\tmae\tave.rank\tfirst\tcrr\tncrr\tndcg\n");
     
     // overall metrics to track
@@ -148,7 +149,7 @@ void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Dat
             rating = data->test_ratings(user, item);
             pred = pred_set.first;
             rank++;
-            if (rank <= 1000) { // TODO: make this threshold a command line arg
+            if (rank <= 1000 && write_rankings) { // TODO: make this threshold a command line arg
                 fprintf(file, "%d\t%d\t%d\t%d\t%f\t%d\t%d\n", user, data->user_id(user),
                     item, data->item_id(item), pred, rank, rating);
             }
@@ -208,6 +209,8 @@ void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Dat
     }
     fclose(user_file);
     fclose(file);
+    if (!write_rankings)
+        remove((outdir+"/rankings_" + label + ".tsv").c_str());
 
     
     // per item attibutes
@@ -303,7 +306,7 @@ void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Dat
     fclose(item_file);
     
     // write out results
-    file = fopen((outdir+"/eval_summary_final.dat").c_str(), "w");
+    file = fopen((outdir+"/eval_summary_" + label + ".dat").c_str(), "w");
     fprintf(file, "metric\tuser average\theldout pair average\n");
     fprintf(file, "RMSE\t%f\t%f\n", user_sum_rmse/user_count, 
         sqrt(rmse/heldout_count));

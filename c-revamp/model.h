@@ -3,5 +3,5 @@ class Model {
         Data* data;
     
     public:
-        virtual double prediction(int user, int item) { return 0; };
+        virtual double predict(int user, int item) { return 0; };
 };

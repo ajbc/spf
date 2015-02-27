@@ -18,4 +18,4 @@ bool prediction_compare(const pair<double,int>& itemA,
     const pair<double, int>& itemB);
 
 // take a prediction function as an argument
-void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Data* data, bool stats, unsigned long int seed, bool verbose);
+void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Data* data, bool stats, unsigned long int seed, bool verbose, string label, bool write_rankings);

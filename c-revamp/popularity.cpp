@@ -12,7 +12,7 @@ void print_usage_and_exit() {
     printf("Distributed under ???; see LICENSE file for details.\n");
     
     printf("\nusage:\n");
-    printf(" spf [options]\n");
+    printf(" ./pop [options]\n");
     printf("  --help            print help information\n");
     printf("  --verbose         print extra information while running\n");
 
@@ -45,13 +45,13 @@ void log_item(FILE* file, Data *data, int item, int heldout, double rmse, double
 
 class Popularity: protected Model {
     public:
-        double prediction(int user, int item) {
+        double predict(int user, int item) {
             return data->popularity(item);
         }
 
         void evaluate(Data* d, string outdir, bool verbose) {
             data = d;
-            eval(this, &Model::prediction, outdir, data, true, 11, verbose);
+            eval(this, &Model::predict, outdir, data, true, 11, verbose, "final", true);
         }
 };
 
@@ -175,4 +175,6 @@ int main(int argc, char* argv[]) {
     pop.evaluate(data, outdir, verbose);
 
     delete data;
+    
+    return 0;
 }

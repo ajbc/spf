@@ -6,6 +6,7 @@
 #include <list>
 
 #include "utils.h"
+#include "eval.h"
 
 using namespace std;
 using namespace arma;
@@ -174,7 +175,7 @@ struct model_settings {
     }
 };
 
-class SPF {
+class SPF: protected Model {
     private:
         model_settings* settings;
         Data* data;
