@@ -25,6 +25,7 @@ mkdir $2/pop
 seed=948237247
 
 echo "compiling model + popularity baseline"
+cd ../src
 make clean
 make
 make pop
@@ -45,12 +46,6 @@ else
 fi
 
 (./pop --data $1 --out $2/pop > $2/pop/out 2> $2/pop/err &)
-
-echo ""
-echo "*** it's okay if this script fails beyond this point ***"
-echo " * trying to build code for Gaussian MF comparison"
-#mkdir ctr; cd ctr; wget http://www.cs.cmu.edu/~chongw/software/ctr.tar.gz; tar -xvzf ctr.tar.gz; cd ../
-#cd ctr; make; cd ../
 
 #echo " * reformatting input for MF comparisons"
 #python mkdat/to_list_form.py $1
@@ -76,12 +71,6 @@ echo " * trying to build code for Gaussian MF comparison"
 #mv $2/SoRec $2/SoRec-ctr
 
 echo ""
-echo " * getting code for librec comparisons"
-#mkdir librec; cd librec
-#wget http://www.librec.net/release/librec-v1.2-rc1.zip
-#unzip librec-v1.2-rc1.zip
-#cd ../
-make librec
 
 echo ""
 echo " * getting data ready for librec comparisons"

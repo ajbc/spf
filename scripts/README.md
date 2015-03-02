@@ -1,8 +1,10 @@
 **Main scripts**
 - `process_data.py` process the data into 80% train, 10% test, and 1% validation sets
     - This script culls the user network such that only connections that have at least one item in common are included.
-    - **Use:** `python process_data.py [ratings-file] [network-file] [output-dir] [K]`
-- `study.sh` run SPF and comparison models on a specified dataset
+    - **Use:** `python process_data.py [ratings-file] [network-file] [output-dir]`
+- `setup.sh` download code for comparison models and compile; run from scripts dir
+    - **Use:** `./setup.sh`
+- `study.sh` run SPF and comparison models on a specified dataset; run from scripts dir
     - **Use:** `./study [data-dir] [output-dir] [K] [directed/undirected]`
 
 **Process to data form for comparison models**
