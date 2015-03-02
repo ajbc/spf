@@ -1,8 +1,10 @@
 # Social Poisson Factorization (SPF)
 
 #### Repository Contents
-- `src` C++ source code
+- `conf` contains a base configure file for running LibRec to do model comparisons
 - `scripts` bash and python scripts for data processing and running experiments
+- `src` C++ source code
+- `README.md` this file
 
 
 ## Data
