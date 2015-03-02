@@ -18,9 +18,9 @@
     - **Use:** `python adjust_amplification.py [ data src dir ] [ new data dir ] [ % shared ]`
 - `amplify_data.py` same as above, but users will only increase their % shared, never decrease
 - `deamplify_data.py` same as above, but users will only decrease their % shared, never increase
-- `amplification_check.py` check the percent of items shared with friends, averaged across all users
-    - **Use:** ``
+- `amplification_check.py` print out the percent of items shared with friends, averaged across all users
+    - **Use:** `python amplification_check.py [data-dir]`
 - `sim_data.sh` create a set of datasets, each with the same seed data, but different amplification settings
-    - **Use:** ``
+    - **Use:** `./sim_data.sh [data-dir]`
 - `aggregate_amp_results.py` aggregate results of an amplification study (on a range of amplification settings)
-    - **Use:** ``
+    - **Use:** `python aggregate_amp_results [fits-dir] [out-filename]`
