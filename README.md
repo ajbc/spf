@@ -67,7 +67,7 @@ python process_data.py [ratings-file] [network-file] [output-dir]
 ## Running an Experiment
 1. Download and compile code for comparison models:
     `cd scripts/; ./setup.sh; cd ..`
-2. Kick off fits for multiple models with the script:
+2. Kick off fits for multiple models with the script (from `scripts` directory):
 ```
 ./study [data-dir] [output-dir] [K] [directed/undirected]
 ```
