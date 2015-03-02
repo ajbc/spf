@@ -2,6 +2,7 @@ import sys
 from collections import defaultdict
 
 path = sys.argv[1]
+undir = (len(sys.argv) == 3)
 
 fin = open(path +'/train.tsv')
 finn = open(path +'/network.tsv')
@@ -46,8 +47,9 @@ for line in finn:
     item_data[len(imap) + umap[friend]].append(umap[user])
 
     # undirected
-    user_data[umap[friend]].append(len(imap) + umap[user])
-    item_data[len(imap) + umap[user]].append(umap[friend])
+    if undir:
+        user_data[umap[friend]].append(len(imap) + umap[user])
+        item_data[len(imap) + umap[user]].append(umap[friend])
 
 for item in sorted(items, key=lambda x: imap[x]):
     line = str(len(item_data[imap[item]]))
