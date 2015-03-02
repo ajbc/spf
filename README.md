@@ -19,6 +19,13 @@ connections that have at least one item in common are included.
 python process_data.py [ratings-file] [network-file] [output-dir]
 ```
 
+Alternatively, data with time information (like shown below) can be processed with
+`process_time_data.py` which takes the same arguments as `process_data.py`.  This
+will split the data according to time; ratings are implicit and therefore binary.
+```
+user id    item id    unix time
+```
+
 
 ## Running SPF
 1. Clone the repo:

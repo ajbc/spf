@@ -9,6 +9,11 @@
 - `aggregate_results.py` aggregate results of a study into a single comma-separated file
     - **Use:** `python aggregate_results.py [study-dir] [output-file] [K]`
 
+**Alternate data processing**
+- `process_time_data.py` used to process binary data that has timestamps (ratings are 
+    userID/itemID/unixTime instead of userID/itemID/rating)
+    - **Use:** `python process_time_data.py [ratings-file] [network-file] [output-dir]`
+
 **Process to data form for comparison models**
 - `to_librec_form.py` process standard data form into form for LibRec; default directed network
     - **Use:** `python to_librec_form.py [data-dir] [optional:undirected]`
