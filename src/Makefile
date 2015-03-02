@@ -19,7 +19,7 @@ pop: popularity.cpp $(CSOURCE)
 mf: mf.cpp $(CSOURCE)
 	  $(CC) mf.cpp $(CSOURCE) -o mf
 
-librec: librec.cpp $(CSOURCE)
+librec_eval: librec.cpp $(CSOURCE)
 	  $(CC) librec.cpp $(CSOURCE) -o librec_eval
 
 

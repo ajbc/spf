@@ -24,11 +24,7 @@ mkdir $2/pop
 
 seed=948237247
 
-echo "compiling model + popularity baseline"
 cd ../src
-make clean
-make
-make pop
 
 echo " * initializing study of main model (this will launch multiple processes"
 echo "   that will continue living after this bash script has completed)"
@@ -76,10 +72,10 @@ echo ""
 echo " * getting data ready for librec comparisons"
 if [ "$directed" = "directed" ]; then
     # directed
-    python mkdat/to_librec_form.py $1
+    python ../scripts/to_librec_form.py $1
 else
     # undirected
-    python mkdat/to_librec_form.py $1 undir
+    python ../scripts/to_librec_form.py $1 undir
 fi
 
 echo " * fitting librec comparisons"
@@ -97,12 +93,12 @@ do
     else
         echo "num.max.iter=100" >> tmp
     fi
-    cat tmp conf/base.conf > conf/tmp.conf
+    cat tmp ../conf/base.conf > ../conf/tmp.conf
     echo ""
     echo "CONF"
-    head conf/tmp.conf
+    head ../conf/tmp.conf
     echo ""
-    time java -jar librec/librec.jar -c conf/tmp.conf
+    time java -jar librec/librec.jar -c ../conf/tmp.conf
     mkdir $2/$model
     tail -n +2 Results/$model*prediction.txt > $2/$model/ratings.dat
 

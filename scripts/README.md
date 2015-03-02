@@ -6,6 +6,8 @@
     - **Use:** `./setup.sh`
 - `study.sh` run SPF and comparison models on a specified dataset; run from scripts dir
     - **Use:** `./study [data-dir] [output-dir] [K] [directed/undirected]`
+- `aggregate_results.py` aggregate results of a study into a single comma-separated file
+    - **Use:** `python aggregate_results.py [study-dir] [output-file] [K]`
 
 **Process to data form for comparison models**
 - `to_librec_form.py` process standard data form into form for LibRec; default directed network
