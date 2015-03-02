@@ -46,7 +46,6 @@ fi
 
 (./pop --data $1 --out $2/pop > $2/pop/out 2> $2/pop/err &)
 
-exit
 echo ""
 echo "*** it's okay if this script fails beyond this point ***"
 echo " * trying to build code for Gaussian MF comparison"
