@@ -1,5 +1,8 @@
 # Social Poisson Factorization (SPF)
 
+(C) Copyright 2014-2015, Allison J.B. Chaney
+This software is distributed under the MIT license.  See `LICENSE.txt` for details.
+
 #### Repository Contents
 - `conf` contains a base configure file for running LibRec to do model comparisons
 - `scripts` bash and python scripts for data processing and running experiments

@@ -11,8 +11,8 @@
 void print_usage_and_exit() {
     // print usage information
     printf("********************** Social Poisson Factorization (SPF) **********************\n");
-    printf("(c) Copyright 2014 Allison J.B. Chaney  ( achaney@cs.princeton.edu )\n");
-    printf("Distributed under ???; see LICENSE file for details.\n");
+    printf("(c) Copyright 2014-2015 Allison J.B. Chaney  ( achaney@cs.princeton.edu )\n");
+    printf("Distributed under MIT License; see LICENSE file for details.\n");
     
     printf("\nusage:\n");
     printf(" spf [options]\n");
