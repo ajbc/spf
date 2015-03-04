@@ -8,6 +8,7 @@ This software is distributed under the MIT license.  See `LICENSE.txt` for detai
 - `conf` contains a base configure file for running LibRec to do model comparisons
 - `scripts` bash and python scripts for data processing and running experiments
 - `src` C++ source code
+- `dat` example data
 - `README.md` this file
 
 
