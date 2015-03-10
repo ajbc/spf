@@ -31,17 +31,20 @@ echo "   that will continue living after this bash script has completed)"
 
 if [ "$directed" = "directed" ]; then
     # directed
-    (./spf --data $datadir --out $outdir/spf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $outdir/spf.out 2> $outdir/spf.err &)
-    (./spf --data $datadir --out $outdir/pf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/pf.out 2> $outdir/pf.err &)
-    (./spf --data $datadir --out $outdir/sf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/sf.out 2> $outdir/sf.err &)
+    (time (./spf --data $datadir --out $outdir/spf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $outdir/spf.out 2> $outdir/spf.err) > $outdir/spf.time.out 2> $outdir/spf.time.err &)
+    (time (./spf --data $datadir --out $outdir/pf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/pf.out 2> $outdir/pf.err) > $outdir/pf.time.out 2> $outdir/pf.time.err &)
+    (time (./spf --data $datadir --out $outdir/sf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/sf.out 2> $outdir/sf.err) > $outdir/sf.time.out 2> $outdir/sf.time.err &)
 else
     # undirected
-    (./spf --data $datadir --out $outdir/spf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $outdir/spf.out 2> $outdir/spf.err &)
-    (./spf --data $datadir --out $outdir/pf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/pf.out 2> $outdir/pf.err &)
-    (./spf --data $datadir --out $outdir/sf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/sf.out 2> $outdir/sf.err &)
+    (time (./spf --data $datadir --out $outdir/spf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $outdir/spf.out 2> $outdir/spf.err) > $outdir/spf.time.out 2> $outdir/spf.time.err &)
+    (time (./spf --data $datadir --out $outdir/pf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/pf.out 2> $outdir/pf.err) > $outdir/pf.time.out 2> $outdir/pf.time.err &)
+    (time (./spf --data $datadir --out $outdir/sf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/sf.out 2> $outdir/sf.err) > $outdir/sf.time.out 2> $outdir/sf.time.err &)
 fi
 
-(./pop --data $datadir --out $outdir/pop > $outdir/pop.out 2> $outdir/pop.err &)
+(time (./pop --data $datadir --out $outdir/pop > $outdir/pop.out 2> $outdir/pop.err) > $outdir/pop.time.out 2> $outdir/pop.time.err &)
+
+
+
 
 #echo " * reformatting input for MF comparisons"
 #python mkdat/to_list_form.py $datadir
