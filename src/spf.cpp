@@ -132,7 +132,18 @@ void SPF::learn() {
                 if (settings->item_bias)
                     update_delta(item);
             }
+        } else if (settings->item_bias) {
+            set<int>::iterator it;
+            for (it = items.begin(); it != items.end(); it++) {
+                item = *it;
+                if (iter_count[item] == 0)
+                    iter_count[item] = 0;
+                iter_count[item]++;
+                if (settings->item_bias)
+                    update_delta(item);
+            }
         }
+
 
         // check for convergence
         if (on_final_pass) {
@@ -218,8 +229,11 @@ double SPF::predict(int user, int item) {
     double prediction = settings->social_only ? 1e-10 : 0;
     
     prediction += accu(tau.col(user) % data->ratings.col(item));
-    if (!settings->social_only)
+    
+    if (!settings->social_only) {
         prediction += accu(theta.col(user) % beta.col(item));
+    }
+
     if (settings->item_bias) {
         prediction += delta(item);
     }
@@ -400,7 +414,7 @@ void SPF::update_shape(int user, int item, int rating) {
     }
 
     if (settings->item_bias) {
-        a_delta(item) += (phi_B / phi_sum) * scale;
+        a_delta(item) += (phi_B / (phi_sum * rating)) * scale;
     }
 }
 
