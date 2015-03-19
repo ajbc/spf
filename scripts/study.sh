@@ -10,6 +10,7 @@ datadir=$(readlink -f $1)
 outdir=$(readlink -f $2)
 K=$3
 directed=$4
+iter=100
 
 echo "creating directory structure"
 if [ -d $outdir ]; then
@@ -31,14 +32,14 @@ echo "   that will continue living after this bash script has completed)"
 
 if [ "$directed" = "directed" ]; then
     # directed
-    (time (./spf --data $datadir --out $outdir/spf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $outdir/spf.out 2> $outdir/spf.err) > $outdir/spf.time.out 2> $outdir/spf.time.err &)
-    (time (./spf --data $datadir --out $outdir/pf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/pf.out 2> $outdir/pf.err) > $outdir/pf.time.out 2> $outdir/pf.time.err &)
-    (time (./spf --data $datadir --out $outdir/sf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/sf.out 2> $outdir/sf.err) > $outdir/sf.time.out 2> $outdir/sf.time.err &)
+    (time (./spf --data $datadir --out $outdir/spf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 1000 --max_iter 10000 --final_pass > $outdir/spf.out 2> $outdir/spf.err) > $outdir/spf.time.out 2> $outdir/spf.time.err &)
+    (time (./spf --data $datadir --out $outdir/pf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 1000 --max_iter 10000 --final_pass > $outdir/pf.out 2> $outdir/pf.err) > $outdir/pf.time.out 2> $outdir/pf.time.err &)
+    (time (./spf --data $datadir --out $outdir/sf --directed --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 1000 --max_iter 10000 --final_pass > $outdir/sf.out 2> $outdir/sf.err) > $outdir/sf.time.out 2> $outdir/sf.time.err &)
 else
     # undirected
-    (time (./spf --data $datadir --out $outdir/spf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 2000 --max_iter 2000 --final_pass > $outdir/spf.out 2> $outdir/spf.err) > $outdir/spf.time.out 2> $outdir/spf.time.err &)
-    (time (./spf --data $datadir --out $outdir/pf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/pf.out 2> $outdir/pf.err) > $outdir/pf.time.out 2> $outdir/pf.time.err &)
-    (time (./spf --data $datadir --out $outdir/sf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 2000 --max_iter 2000 --final_pass > $outdir/sf.out 2> $outdir/sf.err) > $outdir/sf.time.out 2> $outdir/sf.time.err &)
+    (time (./spf --data $datadir --out $outdir/spf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --min_iter 1000 --max_iter 10000 --final_pass > $outdir/spf.out 2> $outdir/spf.err) > $outdir/spf.time.out 2> $outdir/spf.time.err &)
+    (time (./spf --data $datadir --out $outdir/pf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --factor_only --min_iter 1000 --max_iter 10000 --final_pass > $outdir/pf.out 2> $outdir/pf.err) > $outdir/pf.time.out 2> $outdir/pf.time.err &)
+    (time (./spf --data $datadir --out $outdir/sf --bias --svi --K $K --seed $seed --save_freq 1000 --conv_freq 100 --social_only --min_iter 1000 --max_iter 10000 --final_pass > $outdir/sf.out 2> $outdir/sf.err) > $outdir/sf.time.out 2> $outdir/sf.time.err &)
 fi
 
 (time (./pop --data $datadir --out $outdir/pop > $outdir/pop.out 2> $outdir/pop.err) > $outdir/pop.time.out 2> $outdir/pop.time.err &)
@@ -83,7 +84,7 @@ fi
 
 echo " * fitting librec comparisons"
 # config files!! (TODO)
-for model in SoRec SocialMF TrustMF SoReg RSTE PMF TrustSVD MostPop BiasedMF
+for model in SoRec SocialMF TrustMF SoReg RSTE PMF TrustSVD BiasedMF
 do
     echo $model
     echo "dataset.training.lins=$datadir/ratings.dat" > tmp
@@ -91,11 +92,7 @@ do
     echo "dataset.testing.lins=$datadir/test.dat" >> tmp
     echo "recommender=$model" >> tmp
     echo "num.factors=$K" >> tmp
-    if [ "$model" = "TrustSVD" ]; then
-        echo "num.max.iter=50" >> tmp
-    else
-        echo "num.max.iter=100" >> tmp
-    fi
+    echo "num.max.iter=$iter" >> tmp
     cat tmp ../conf/base.conf > ../conf/tmp.conf
     echo ""
     echo "CONF"
