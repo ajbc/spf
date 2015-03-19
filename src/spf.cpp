@@ -227,9 +227,9 @@ void SPF::learn() {
 
 double SPF::predict(int user, int item) {
     double prediction = settings->social_only ? 1e-10 : 0;
-    
+  
     prediction += accu(tau.col(user) % data->ratings.col(item));
-    
+   
     if (!settings->social_only) {
         prediction += accu(theta.col(user) % beta.col(item));
     }
@@ -266,7 +266,7 @@ void SPF::evaluate(string label, bool write_rankings) {
     time(&start_time);
     
     eval(this, &Model::predict, settings->outdir, data, false, 11,
-        settings->verbose, label, write_rankings);
+        settings->verbose, label, write_rankings, false);
     
     time(&end_time);
     log_time(-1, difftime(end_time, start_time));
@@ -317,6 +317,11 @@ void SPF::initialize_parameters() {
                 logbeta(k, item) = log(beta(k, item));
             }
             beta.col(item) /= accu(beta.col(item));
+        }
+    }
+
+    if (settings->item_bias) {
+        for (item = 0; item < data->item_count(); item++) {
             delta(item) = data->popularity(item);
         }
     }
@@ -371,6 +376,15 @@ void SPF::save_parameters(string label) {
             for (k = 0; k < settings->k; k++)
                 fprintf(file, "\t%e", beta(k, item));
             fprintf(file, "\n");
+        }
+        fclose(file);
+    }
+
+    if (settings->item_bias) {
+        // write out bias delta
+        file = fopen((settings->outdir+"/delta-"+label+".dat").c_str(), "w");
+        for (int item = 0; item < data->item_count(); item++) {
+            fprintf(file, "%d\t%d\t%e", item, data->item_id(item), delta(item));
         }
         fclose(file);
     }

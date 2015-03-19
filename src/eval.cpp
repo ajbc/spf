@@ -44,10 +44,10 @@ bool prediction_compare(const pair<double,int>& itemA,
 
 // take a prediction function as an argument
 void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Data* data, bool stats, 
-    unsigned long int seed, bool verbose, string label, bool write_rankings) { 
+    unsigned long int seed, bool verbose, string label, bool write_rankings, bool mapped_ids) { 
     // random generator to break ties
     gsl_rng_set(rand_gen, seed);
-
+    
     // test the final model fit
     printf("evaluating model on held-out data\n");
     
@@ -136,7 +136,14 @@ void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Dat
 
             total_pred++;
 
-            ratings.push_back(make_pair((model->*prediction)(user,item), item));
+            double p = 0;
+            if (mapped_ids) {
+                p = (model->*prediction)(data->user_id(user),data->item_id(item));
+            } else {
+                p = (model->*prediction)(user, item);
+            }
+            printf("pushing rating: %f\n", p);
+            ratings.push_back(make_pair(p, item));
         }
         
         ratings.sort(prediction_compare);

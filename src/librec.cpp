@@ -52,7 +52,7 @@ class LibRec: protected Model {
         }
 
         void evaluate(string outdir, bool verbose) {
-            eval(this, &Model::predict, outdir, data, false, 11, verbose, "final", true);
+            eval(this, &Model::predict, outdir, data, false, 11, verbose, "final", true, true);
         }
 };
 

@@ -135,7 +135,6 @@ int main(int argc, char* argv[]) {
         {"a_delta",         required_argument, NULL, '7'},
         {"b_delta",         required_argument, NULL, '8'},
         {"social_only",     no_argument, &social_only, 1},
-        {"social_only",     no_argument, &social_only, 1},
         {"factor_only",     no_argument, &factor_only, 1},
         {"bias",            no_argument, NULL, 'i'},
         {"binary",          no_argument, &binary, 1},

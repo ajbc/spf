@@ -16,6 +16,9 @@ profile: $(LSOURCE)
 pop: popularity.cpp $(CSOURCE)
 	  $(CC) popularity.cpp $(CSOURCE) -o pop
 
+rand: random.cpp $(CSOURCE)
+	  $(CC) random.cpp $(CSOURCE) -o rand
+
 mf: mf.cpp $(CSOURCE)
 	  $(CC) mf.cpp $(CSOURCE) -o mf
 
@@ -25,4 +28,4 @@ librec_eval: librec.cpp $(CSOURCE)
 
 # cleanup
 clean:
-	-rm -f spf pop mf librec_eval
+	-rm -f spf pop mf librec_eval rand

@@ -51,7 +51,7 @@ class Popularity: protected Model {
 
         void evaluate(Data* d, string outdir, bool verbose) {
             data = d;
-            eval(this, &Model::predict, outdir, data, true, 11, verbose, "final", true);
+            eval(this, &Model::predict, outdir, data, true, 11, verbose, "final", true, false);
         }
 };
 
