@@ -22,6 +22,7 @@ mkdir $outdir/spf
 mkdir $outdir/pf
 mkdir $outdir/sf
 mkdir $outdir/pop
+mkdir $outdir/rand
 
 seed=948237247
 
@@ -43,6 +44,7 @@ else
 fi
 
 (time (./pop --data $datadir --out $outdir/pop > $outdir/pop.out 2> $outdir/pop.err) > $outdir/pop.time.out 2> $outdir/pop.time.err &)
+(time (./rand --data $datadir --out $outdir/rand > $outdir/rand.out 2> $outdir/rand.err) > $outdir/rand.time.out 2> $outdir/rand.time.err &)
 
 
 
