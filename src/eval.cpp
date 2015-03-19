@@ -142,7 +142,6 @@ void eval(Model* model, double (Model::*prediction)(int,int), string outdir, Dat
             } else {
                 p = (model->*prediction)(user, item);
             }
-            printf("pushing rating: %f\n", p);
             ratings.push_back(make_pair(p, item));
         }
         
