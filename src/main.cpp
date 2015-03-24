@@ -40,9 +40,9 @@ void print_usage_and_exit() {
     printf("  --b_delta {b}     rate hyperparamter to delta (item bias); default 0.3\n");
   
     printf("\n");
-    printf("  --social-only     only consider social aspect of factorization (SF)\n");
-    printf("  --factor-only     only consider general factors (no social; PF)\n");
-    printf("  --fix-influence   fix all user influence to be 1\n");
+    printf("  --social_only     only consider social aspect of factorization (SF)\n");
+    printf("  --factor_only     only consider general factors (no social; PF)\n");
+    printf("  --fix_influence   fix all user influence to be 1\n");
     printf("  --bias            include a bias term for each item\n");
 
     printf("\n");
