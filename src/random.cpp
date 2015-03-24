@@ -19,6 +19,7 @@ void print_usage_and_exit() {
     printf("\n");
     printf("  --out {dir}       save directory, required\n");
     printf("  --data {dir}      data directory, required\n");
+    printf("  --seed {seed}     the random seed, default 11\n");
     
     printf("********************************************************************************\n");
 
@@ -43,15 +44,15 @@ void log_item(FILE* file, Data *data, int item, int heldout, double rmse, double
     return;
 }
 
-class Popularity: protected Model {
+class Random: protected Model {
     public:
         double predict(int user, int item) {
             return 0;
         }
 
-        void evaluate(Data* d, string outdir, bool verbose) {
+        void evaluate(Data* d, string outdir, bool verbose, long seed) {
             data = d;
-            eval(this, &Model::predict, outdir, data, true, 11, verbose, "final", true, false);
+            eval(this, &Model::predict, outdir, data, true, seed, verbose, "final", true, false);
         }
 };
 
@@ -62,14 +63,16 @@ int main(int argc, char* argv[]) {
     string outdir = "";
     string datadir = "";
     bool verbose = false;
+    long seed = 11;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "hqo:d:";
+    const char* const short_options = "hqo:d:s:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
         {"verbose",         no_argument,       NULL, 'q'},
         {"out",             required_argument, NULL, 'o'},
         {"data",            required_argument, NULL, 'd'},
+        {"seed",            required_argument, NULL, 's'},
         {NULL, 0, NULL, 0}};
 
   
@@ -88,6 +91,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'd':
                 datadir = optarg;
+                break;
+            case 's':
+                seed = atoi(optarg);
                 break;
             case -1:
                 break;
@@ -136,6 +142,8 @@ int main(int argc, char* argv[]) {
         printf("validation data file (validation.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
     }
+
+    printf("\tseed: %d\n", (int)seed);
     
 
     // read in the data
@@ -171,8 +179,8 @@ int main(int argc, char* argv[]) {
     printf("commencing model evaluation\n");
     
     // test the final model fit
-    Popularity pop = Popularity();
-    pop.evaluate(data, outdir, verbose);
+    Random rand = Random();
+    rand.evaluate(data, outdir, verbose, seed);
 
     delete data;
     
