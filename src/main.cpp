@@ -42,6 +42,7 @@ void print_usage_and_exit() {
     printf("\n");
     printf("  --social-only     only consider social aspect of factorization (SF)\n");
     printf("  --factor-only     only consider general factors (no social; PF)\n");
+    printf("  --fix-influence   fix all user influence to be 1\n");
     printf("  --bias            include a bias term for each item\n");
 
     printf("\n");
@@ -97,6 +98,7 @@ int main(int argc, char* argv[]) {
     // these are really bools, but typed as integers to play nice with getopt
     int social_only = 0;
     int factor_only = 0;
+    int fix_influence = 0;
     bool item_bias = 0;
     int binary = 0;
     int directed = 0;
@@ -136,6 +138,7 @@ int main(int argc, char* argv[]) {
         {"b_delta",         required_argument, NULL, '8'},
         {"social_only",     no_argument, &social_only, 1},
         {"factor_only",     no_argument, &factor_only, 1},
+        {"fix_influence",   no_argument, &fix_influence, 1},
         {"bias",            no_argument, NULL, 'i'},
         {"binary",          no_argument, &binary, 1},
         {"directed",        no_argument, &directed, 1},
@@ -316,6 +319,11 @@ int main(int argc, char* argv[]) {
     } else {
         printf("\tsocial Poisson factorization (SPF)\n");
     }
+
+    if (fix_influence) {
+        printf("\tsocial influence parameters fixed to 1\n");
+    }
+
     if (!social_only) {
         printf("\tK = %d   (number of latent factors for general preferences)\n", k);
     }
@@ -377,7 +385,7 @@ int main(int argc, char* argv[]) {
         a_delta, b_delta,
         (bool) social_only, (bool) factor_only, item_bias, (bool) binary, (bool) directed,
         seed, save_freq, eval_freq, conv_freq, max_iter, min_iter, converge_delta,
-        final_pass, sample_size, svi_delay, svi_forget, k);
+        final_pass, sample_size, svi_delay, svi_forget, (bool) fix_influence, k);
 
     // read in the data
     printf("********************************************************************************\n");

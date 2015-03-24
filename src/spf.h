@@ -29,6 +29,7 @@ struct model_settings {
 
     bool social_only;
     bool factor_only;
+    bool fix_influence;
     bool item_bias;
     bool binary;
     bool directed;
@@ -57,7 +58,7 @@ struct model_settings {
              long rand, int savef, int evalf, int convf, 
              int iter_max, int iter_min, double delta,
              bool finalpass, int sample, double svi_delay, double svi_forget,
-             int num_factors) {
+             bool fix, int num_factors) {
         verbose = print;
 
         outdir = out;
@@ -76,6 +77,7 @@ struct model_settings {
 
         social_only = social;
         factor_only = factor;
+        fix_influence = fix;
         item_bias = bias;
         binary = bin;
         directed = dir;
@@ -117,10 +119,14 @@ struct model_settings {
         } else {
             fprintf(file, "\tsocial Poisson factorization (SPF)\n");
         }
+    
+        if (fix_influence) {
+            fprintf(file,"\tsocial influence parameters fixed to 1\n");
+        }
+    
         if (!social_only) {
             fprintf(file, "\tK = %d   (number of latent factors for general preferences)\n", k);
         }
-
     
         fprintf(file, "\nshape and rate hyperparameters:\n");
         if (!social_only) {

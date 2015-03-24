@@ -93,11 +93,11 @@ void SPF::learn() {
 
                 // update per-user parameters
                 double user_change = 0;
-                if (!settings->factor_only)
+                if (!settings->factor_only && !settings->fix_influence)
                     user_change += update_tau(user);
                 if (!settings->social_only)
                     user_change += update_theta(user);
-                if (!settings->social_only && !settings->factor_only) {
+                if (!settings->social_only && !settings->factor_only && !settings->fix_influence) {
                     user_change /= 2;
 
                     // if the updates are less than 1% change, the local params have converged
@@ -265,7 +265,7 @@ void SPF::evaluate(string label, bool write_rankings) {
     time_t start_time, end_time;
     time(&start_time);
     
-    eval(this, &Model::predict, settings->outdir, data, false, 11,
+    eval(this, &Model::predict, settings->outdir, data, false, settings->seed,
         settings->verbose, label, write_rankings, false);
     
     time(&end_time);
@@ -339,7 +339,7 @@ void SPF::reset_helper_params() {
 
 void SPF::save_parameters(string label) {
     FILE* file;
-    if (!settings->factor_only) {
+    if (!settings->factor_only & !settings->fix_influence) {
         // save tau
         file = fopen((settings->outdir+"/tau-"+label+".dat").c_str(), "w");
         fprintf(file, "uid\torig.uid\tvid\torig.vid\ttau\n");
@@ -412,7 +412,7 @@ void SPF::update_shape(int user, int item, int rating) {
     if (phi_sum == 0)
         return;
 
-    if (!settings->factor_only) {
+    if (!settings->factor_only & !settings->fix_influence) {
         phi_SF /= phi_sum * rating;
         int neighbor;
         for (int n = 0; n < data->neighbor_count(user); n++) {
