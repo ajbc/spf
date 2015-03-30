@@ -29,7 +29,6 @@ for line in open(path + '/validation.tsv'):
 test_users = set()
 test_items = set()
 ratings = dict()
-fout_test = open(path +'/test.dat', 'w+')
 for line in open(path + '/test.tsv'):
     user, item, rating = [int(x.strip()) for x in line.split('\t')]
     if user in users and item in items:
@@ -37,6 +36,13 @@ for line in open(path + '/test.tsv'):
         test_items.add(item)
         ratings[(user,item)] = rating
         user_items[user].add(item)
+
+test_max = 60000000
+test_index = 1
+test_count = 0
+fout_test = open(path +'/test-%02d.dat' % test_index, 'w+')
+
+print "starting test batch 1"
 for user in test_users:
     all_items = list(items)
     random.shuffle(all_items)
@@ -51,6 +57,15 @@ for user in test_users:
             fout_test.write("%d\t%d\t%d\n" % (user, item, rating))
         else:
             fout_test.write("%d\t%d\t0\n" % (user, item))
+        test_count += 1
+
+    if test_count > test_max:
+        fout_test.close()
+        test_index += 1
+        fout_test = open(path +'/test-%02d.dat' % test_index, 'w+')
+        print "starting test batch %d" % test_index
+        test_count = 0
+
 fout.close()
 fout_test.close()
 

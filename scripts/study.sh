@@ -10,7 +10,7 @@ datadir=$(readlink -f $1)
 outdir=$(readlink -f $2)
 K=$3
 directed=$4
-iter=10
+iter=100
 
 echo "creating directory structure"
 if [ -d $outdir ]; then
@@ -91,28 +91,40 @@ fi
 echo " * fitting librec comparisons"
 for model in SoRec SocialMF TrustMF SoReg RSTE PMF TrustSVD BiasedMF "SVD++"
 do
-    echo $model
-    echo "dataset.training.lins=$datadir/ratings.dat" > tmp
-    echo "dataset.social.lins=$datadir/network.dat" >> tmp
-    echo "dataset.testing.lins=$datadir/test.dat" >> tmp
-    echo "recommender=$model" >> tmp
-    echo "num.factors=$K" >> tmp
-    echo "num.max.iter=$iter" >> tmp
-    cat tmp ../conf/base.conf > ../conf/tmp.conf
-    echo ""
-    echo "CONF"
-    head ../conf/tmp.conf
-    echo ""
-    time java -jar librec/librec.jar -c ../conf/tmp.conf
-    mkdir $outdir/$model
-    tail -n +2 Results/$model*prediction.txt > $outdir/$model/ratings.dat
+    rm $outdir/$model/ratings.dat
+    for testidx in $(seq -f "%02g" 1 $numtest)
+    do
+        echo -e "$model\t(test section $testidx)"
+        echo "dataset.training.lins=$datadir/ratings.dat" > tmp
+        echo "dataset.social.lins=$datadir/network.dat" >> tmp
+        echo "dataset.testing.lins=$datadir/test-$testidx.dat" >> tmp
+        echo "recommender=$model" >> tmp
+        echo "num.factors=$K" >> tmp
+        echo "num.max.iter=$iter" >> tmp
+        
+        if [ "$model" = "TrustSVD" ]; then
+            echo "val.reg.social=0.5" >> tmp
+            echo "learn.rate=0.001" >> tmp
+            echo "max.learn.rate=0.001" >> tmp
+        else
+            echo "val.reg.social=1.0" >> tmp
+            echo "learn.rate=0.01" >> tmp
+            echo "max.learn.rate=-1" >> tmp
+        fi
+        
+        cat tmp ../conf/base.conf > ../conf/tmp.conf
+        echo ""
+        time java -jar librec/librec.jar -c ../conf/tmp.conf 2> $outdir/$model.fit.time.err
+        mkdir $outdir/$model
+        tail -n +2 Results/$model*prediction.txt >> $outdir/$model/ratings.dat
 
+    done
+    
     LINECOUNT=`wc -l $outdir/$model/ratings.dat | cut -f1 -d' '`
 
     if [[ $LINECOUNT != 0 ]]; then
-        time ./librec_eval --data $datadir --out $outdir/$model
+        time ./librec_eval --data $datadir --out $outdir/$model 2> $outdir/$model.eval.time.err
     fi
 done
-
 
 echo "all done!"
