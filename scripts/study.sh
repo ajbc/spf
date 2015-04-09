@@ -105,11 +105,9 @@ do
         if [ "$model" = "TrustSVD" ]; then
             echo "val.reg.social=0.5" >> tmp
             echo "learn.rate=0.001" >> tmp
-            echo "max.learn.rate=0.001" >> tmp
         else
             echo "val.reg.social=1.0" >> tmp
             echo "learn.rate=0.01" >> tmp
-            echo "max.learn.rate=-1" >> tmp
         fi
         
         cat tmp ../conf/base.conf > ../conf/tmp.conf
