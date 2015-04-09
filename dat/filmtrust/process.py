@@ -30,11 +30,11 @@ random.seed(11)
 ### read in everything
 
 ratings = open(join(raw_dir, "ratings.txt"), 'r')
-user_ratings = defaultdict(list)
+user_ratings = defaultdict(dict)
 ur = defaultdict(set)
 for line in ratings:
     user, item, rating = [int(float(x)) for x in line.strip().split()]
-    user_ratings[user].append((item, rating))
+    user_ratings[user][item] = rating
     ur[user].add(item)
 ratings.close()
 
@@ -60,7 +60,7 @@ a = 0
 b = 0
 c = 0
 for user in user_ratings:
-    ratings = user_ratings[user]
+    ratings = user_ratings[user].items()
     random.shuffle(ratings)
     R = len(ratings)
     for i in range(R):
