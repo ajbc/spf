@@ -31,10 +31,10 @@ cd ../src
 echo " * initializing study of main model (this will launch multiple processes"
 echo "   that will continue living after this bash script has completed)"
 
-convf=500
+convf=100
 savef=1000
-mini=1000
-maxi=10000
+mini=100
+maxi=1000
 
 if [ "$directed" = "directed" ]; then
     # directed
@@ -89,7 +89,9 @@ else
 fi
 
 echo " * fitting librec comparisons"
-for model in SoRec SocialMF TrustMF SoReg RSTE PMF TrustSVD BiasedMF "SVD++"
+
+#for model in SoRec SocialMF TrustMF SoReg RSTE PMF TrustSVD BiasedMF "SVD++"
+for model in SoRec SocialMF TrustMF RSTE TrustSVD
 do
     rm $outdir/$model/ratings.dat
     for testidx in $(seq -f "%02g" 1 $numtest)
@@ -104,10 +106,10 @@ do
         
         if [ "$model" = "TrustSVD" ]; then
             echo "val.reg.social=0.5" >> tmp
-            echo "learn.rate=0.001" >> tmp
+            echo "val.learn.rate=0.001" >> tmp
         else
             echo "val.reg.social=1.0" >> tmp
-            echo "learn.rate=0.01" >> tmp
+            echo "val.learn.rate=0.01" >> tmp
         fi
         
         cat tmp ../conf/base.conf > ../conf/tmp.conf

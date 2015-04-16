@@ -46,7 +46,7 @@ print "starting test batch 1"
 for user in test_users:
     all_items = list(items)
     random.shuffle(all_items)
-    while user_counts[user] > 0:
+    while user_counts[user] > 0 and len(all_items) != 0:
         item = all_items.pop()
         if item not in user_items:
             fout.write("%d\t%d\t0\n" % (user, item))
