@@ -48,6 +48,10 @@ class Data {
         // for use in initializing the network data structures only
         bool has_connection_init(int user, int neighbor);
 
+        // simple summaries
+        float mean_rating;
+        map<int,float> item_ave_ratings;
+        map<int,float> user_ave_ratings;
 
     public:
         sp_fmat ratings;
@@ -77,6 +81,9 @@ class Data {
         int item_id(int item);
 
         int popularity(int item);
+        float ave_rating();
+        float item_ave_rating(int item);
+        float user_ave_rating(int user);
     
         // training data
         int num_training();

@@ -9,6 +9,7 @@ Data::Data(bool bin, bool dir) {
 void Data::read_ratings(string filename) {
     // read in training data
     FILE* fileptr = fopen(filename.c_str(), "r");
+    mean_rating = 0;
 
     int user, item, rating;
     set<unsigned long long> dupe_checker;
@@ -23,11 +24,13 @@ void Data::read_ratings(string filename) {
         if (user_ids.count(user) == 0) {
             user_ids[user] = user_count() - 1;
             reverse_user_ids[user_ids[user]] = user;
+            user_ave_ratings[user] = 0;
         }
         if (item_ids.count(item) == 0) {
             item_ids[item] = item_count() - 1;
             reverse_item_ids[item_ids[item]] = item;
             item_popularity[item_ids[item]] = 0;
+            item_ave_ratings[item] = 0;
         }
 
         if (rating != 0) {
@@ -35,6 +38,10 @@ void Data::read_ratings(string filename) {
             train_items.push_back(item_ids[item]);
             train_ratings.push_back(binary ? 1 : rating);
             item_popularity[item_ids[item]] += 1;
+
+            user_ave_ratings[user] += rating;
+            item_ave_ratings[item] += rating;
+            mean_rating += rating;
         }
     }
     fclose(fileptr);
@@ -49,6 +56,14 @@ void Data::read_ratings(string filename) {
         user_items[train_users[i]].push_back(train_items[i]);
     }
     ratings = sp_fmat(locations, values, user_count(), item_count());
+
+    mean_rating /= num_training();
+    for (int user = 0; user < user_count(); user++) {
+        user_ave_ratings[reverse_user_ids[user]] /= user_items[user].size();
+    }
+    for (int item = 0; item < item_count(); item++) {
+        item_ave_ratings[reverse_item_ids[item]] /= item_popularity[item];
+    }
 }
 
 void Data::read_network(string filename) {
@@ -248,6 +263,18 @@ int Data::item_id(int item) {
 
 int Data::popularity(int item) {
     return item_popularity[item];
+}
+
+float Data::ave_rating() {
+    return mean_rating;
+}
+
+float Data::item_ave_rating(int item) {
+    return item_ave_ratings[item];
+}
+
+float Data::user_ave_rating(int user) {
+    return user_ave_ratings[user];
 }
 
 // training data
