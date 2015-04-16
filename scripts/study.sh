@@ -91,6 +91,7 @@ fi
 echo " * fitting librec comparisons"
 
 #for model in SoRec SocialMF TrustMF SoReg RSTE PMF TrustSVD BiasedMF "SVD++"
+numtest=1
 for model in SoRec SocialMF TrustMF RSTE TrustSVD
 do
     rm $outdir/$model/ratings.dat
