@@ -68,13 +68,19 @@ void SPF::learn() {
         b_theta.each_col() += sum(beta, 1);
 
         set<int> items;
-        int user, item, rating;
+        int user = -1, item, rating;
         for (int i = 0; i < settings->sample_size; i++) {
-            if (settings->svi)
+            if (on_final_pass && settings->final_pass_test) {
+                user++;
+                while (data->test_users.count(user)==0) {
+                    user++;
+                }
+            } else if (settings->svi) {
                 user = gsl_rng_uniform_int(rand_gen, data->user_count());
-            else
+            } else {
                 user = i;
-       
+            }
+
             bool user_converged = false;
             int user_iters = 0;
             while (!user_converged) {
@@ -209,16 +215,22 @@ void SPF::learn() {
         time(&end_time);
         log_time(iteration, difftime(end_time, start_time));
 
-        if (converged && settings->final_pass && !on_final_pass) {
+        if (converged && !on_final_pass && 
+            (settings->final_pass || settings->final_pass_test)) {
             printf("final pass on all users.\n");
             on_final_pass = true;
             converged = false;
 
             // we need to modify some settings for the final pass
-            // things should look exactly like batch here 
-            settings->set_stochastic_inference(false);
-            settings->set_sample_size(data->user_count()); 
-            scale = 1;
+            // things should look exactly like batch for all users
+            if (settings->final_pass) {
+                settings->set_stochastic_inference(false);
+                settings->set_sample_size(data->user_count()); 
+                scale = 1;
+            } else {
+                settings->set_sample_size(data->test_users.size());
+                scale = data->user_count() / settings->sample_size;
+            }
         }
     }
     

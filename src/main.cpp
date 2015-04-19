@@ -61,6 +61,7 @@ void print_usage_and_exit() {
     printf("  --converge {c}    the change in log likelihood required for convergence\n");
     printf("                    default 1e-6\n");
     printf("  --final_pass      do a final pass on all users and items\n");
+    printf("  --final_pass_test do a final pass only on test users\n");
     printf("\n");
 
     printf("  --sample {size}   the stochastic sample size, default 1000\n");
@@ -103,6 +104,7 @@ int main(int argc, char* argv[]) {
     int binary = 0;
     int directed = 0;
     bool final_pass = 0;
+    bool final_pass_test = 0;
 
     time_t t; time(&t);
     long   seed = (long) t;
@@ -120,7 +122,7 @@ int main(int argc, char* argv[]) {
     int    k = 100;
 
     // ':' after a character means it takes an argument
-    const char* const short_options = "hqo:d:vb1:2:3:4:5:6:7:8:is:w:j:g:x:m:c:a:e:f:pk:";
+    const char* const short_options = "hqo:d:vb1:2:3:4:5:6:7:8:is:w:j:g:x:m:c:a:e:f:ptk:";
     const struct option long_options[] = {
         {"help",            no_argument,       NULL, 'h'},
         {"verbose",         no_argument,       NULL, 'q'},
@@ -153,6 +155,7 @@ int main(int argc, char* argv[]) {
         {"delay",           required_argument, NULL, 'e'},
         {"forget",          required_argument, NULL, 'f'},
         {"final_pass",      no_argument, NULL, 'p'},
+        {"final_pass_test", no_argument, NULL, 't'},
         {"K",               required_argument, NULL, 'k'},
         {NULL, 0, NULL, 0}};
 
@@ -239,6 +242,9 @@ int main(int argc, char* argv[]) {
             case 'p':
                 final_pass = true;
                 break;
+            case 't':
+                final_pass_test = true;
+                break;
             case 'k':
                 k = atoi(optarg);
                 break;
@@ -300,14 +306,20 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
     
+    if (final_pass && final_pass_test) {
+        printf("Model cannot do a final pass both on all users and only on test users.  Exiting.\n");
+        exit(-1);
+    }
+    
     if (svi && batchvi) {
         printf("Inference method cannot be both stochatic (SVI) and batch.  Exiting.\n");
         exit(-1);
     }
     
-    if (batchvi && final_pass) {
+    if (batchvi && (final_pass || final_pass_test)) {
         printf("Batch VI doesn't allow for a \"final pass.\" Ignoring this argument.\n");
         final_pass = false;
+        final_pass_test = false;
     }
     
     printf("\nmodel specification:\n");
@@ -365,7 +377,8 @@ int main(int argc, char* argv[]) {
     printf("\tmaximum number of iterations:             %d\n", max_iter);
     printf("\tminimum number of iterations:             %d\n", min_iter);
     printf("\tchange in log likelihood for convergence: %f\n", converge_delta);
-    printf("\tdo a final pass after convergence:        %s\n", final_pass ? "true" : "false");
+    printf("\tfinal pass after convergence:             %s\n", final_pass ? "all users" : 
+        (final_pass_test ? "test users only" : "none"));
     
    
     if (!batchvi) {
@@ -385,7 +398,7 @@ int main(int argc, char* argv[]) {
         a_delta, b_delta,
         (bool) social_only, (bool) factor_only, item_bias, (bool) binary, (bool) directed,
         seed, save_freq, eval_freq, conv_freq, max_iter, min_iter, converge_delta,
-        final_pass, sample_size, svi_delay, svi_forget, (bool) fix_influence, k);
+        final_pass, final_pass_test, sample_size, svi_delay, svi_forget, (bool) fix_influence, k);
 
     // read in the data
     printf("********************************************************************************\n");

@@ -44,6 +44,7 @@ struct model_settings {
 
     bool svi;
     bool final_pass;
+    bool final_pass_test;
     int    sample_size;
     double delay;
     double forget;
@@ -57,7 +58,8 @@ struct model_settings {
              bool social, bool factor, bool bias, bool bin, bool dir,
              long rand, int savef, int evalf, int convf, 
              int iter_max, int iter_min, double delta,
-             bool finalpass, int sample, double svi_delay, double svi_forget,
+             bool finalpass, bool finalpasstest, 
+             int sample, double svi_delay, double svi_forget,
              bool fix, int num_factors) {
         verbose = print;
 
@@ -91,6 +93,7 @@ struct model_settings {
         likelihood_delta = delta;
 
         final_pass = finalpass;
+        final_pass_test = finalpasstest;
         sample_size = sample;
         delay = svi_delay;
         forget = svi_forget;
@@ -166,7 +169,8 @@ struct model_settings {
         fprintf(file, "\tmaximum number of iterations:             %d\n", max_iter);
         fprintf(file, "\tminimum number of iterations:             %d\n", min_iter);
         fprintf(file, "\tchange in log likelihood for convergence: %f\n", likelihood_delta);
-        fprintf(file, "\tdo a final pass after convergence:        %s\n", final_pass ? "true" : "false");
+        fprintf(file, "\tfinal pass after convergence:             %s\n", final_pass ? "all users" : 
+            (final_pass_test ? "test users only" : "none"));
         
         if (svi) {
             fprintf(file, "\nStochastic variational inference parameters\n");
