@@ -44,7 +44,7 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     
     initialize_parameters(); 
 
-    scale = settings->svi ? data->user_count() / settings->sample_size : 1;
+    scale = settings->svi ? float(data->user_count()) / float(settings->sample_size) : 1;
 }
 
 void SPF::learn() {
@@ -469,9 +469,10 @@ double SPF::update_theta(int user) {
     double change = accu(abs(theta(user) - (a_theta(user) / b_theta(user))));
     double total = accu(theta(user));
 
-    theta(user) = a_theta(user) / b_theta(user);
-    for (int k = 0; k < settings->k; k++)
+    for (int k = 0; k < settings->k; k++) {
+        theta(k, user) =  a_theta(k, user) / b_theta(k, user);
         logtheta(k, user) = gsl_sf_psi(a_theta(k, user));
+    }
     logtheta(user) = logtheta(user) - log(b_theta(user));
 
     return change / total;
@@ -484,9 +485,11 @@ void SPF::update_beta(int item) {
         a_beta(item) = (1 - rho) * a_beta_old(item) + rho * a_beta(item);
         a_beta_old(item) = a_beta(item);
     }
-    beta(item)  = a_beta(item) / b_beta(item);
-    for (int k = 0; k < settings->k; k++)
+    
+    for (int k = 0; k < settings->k; k++) {
+        beta(k, item) =  a_beta(k, item) / b_beta(k, item);
         logbeta(k, item) = gsl_sf_psi(a_beta(k, item));
+    }
     logbeta(item) = logbeta(item) - log(b_beta(item));
 }
 
