@@ -1,6 +1,6 @@
 # Social Poisson Factorization (SPF)
 
-(C) Copyright 2014-2015, Allison J.B. Chaney
+(C) Copyright 2014-2016, Allison J.B. Chaney
 
 This software is distributed under the MIT license.  See `LICENSE.txt` for details.
 
