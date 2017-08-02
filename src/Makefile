@@ -1,4 +1,4 @@
-CC = g++ -O3 -larmadillo -lgsl -Wall
+CC = g++ -O3 -larmadillo -lgsl -Wall -static-libstdc++
 
 LSOURCE = main.cpp utils.cpp data.cpp spf.cpp eval.cpp
 CSOURCE = utils.cpp data.cpp eval.cpp

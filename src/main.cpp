@@ -13,7 +13,7 @@ void print_usage_and_exit() {
     printf("********************** Social Poisson Factorization (SPF) **********************\n");
     printf("(c) Copyright 2014-2015 Allison J.B. Chaney  ( achaney@cs.princeton.edu )\n");
     printf("Distributed under MIT License; see LICENSE file for details.\n");
-    
+
     printf("\nusage:\n");
     printf(" spf [options]\n");
     printf("  --help            print help information\n");
@@ -22,13 +22,13 @@ void print_usage_and_exit() {
     printf("\n");
     printf("  --out {dir}       save directory, required\n");
     printf("  --data {dir}      data directory, required\n");
-    
+
     printf("\n");
     printf("  --svi             use stochastic VI (instead of batch VI)\n");
     printf("                    default off for < 10M ratings in training\n");
     printf("  --batch           use batch VI (instead of SVI)\n");
     printf("                    default on for < 10M ratings in training\n");
-    
+
     printf("\n");
     printf("  --a_theta {a}     shape hyperparamter to theta (user preferences); default 0.3\n");
     printf("  --b_theta {b}     rate hyperparamter to theta (user preferences); default 0.3\n");
@@ -38,7 +38,7 @@ void print_usage_and_exit() {
     printf("  --b_tau {b}       rate hyperparamter to tau (user influence); default 5\n");
     printf("  --a_delta {a}     shape hyperparamter to delta (item bias); default 0.3\n");
     printf("  --b_delta {b}     rate hyperparamter to delta (item bias); default 0.3\n");
-  
+
     printf("\n");
     printf("  --social_only     only consider social aspect of factorization (SF)\n");
     printf("  --factor_only     only consider general factors (no social; PF)\n");
@@ -48,7 +48,7 @@ void print_usage_and_exit() {
     printf("\n");
     printf("  --binary          assume ratings are binary (instead of default integer)\n");
     printf("  --directed        assume network is directed (instead of default undirected)\n");
-    
+
     printf("\n");
     printf("  --seed {seed}     the random seed, default from time\n");
     printf("  --save_freq {f}   the saving frequency, default 20.  Negative value means\n");
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     int    max_iter = 300;
     int    min_iter = 30;
     double converge_delta = 1e-6;
-    
+
     int    sample_size = 1000;
     double svi_delay = 1024;
     double svi_forget = 0.75;
@@ -159,8 +159,8 @@ int main(int argc, char* argv[]) {
         {"K",               required_argument, NULL, 'k'},
         {NULL, 0, NULL, 0}};
 
-  
-    int opt = 0; 
+
+    int opt = 0;
     while(true) {
         opt = getopt_long(argc, argv, short_options, long_options, NULL);
         switch(opt) {
@@ -223,13 +223,13 @@ int main(int argc, char* argv[]) {
                 break;
             case 'x':
                 max_iter =  atoi(optarg);
-                break;    
+                break;
             case 'm':
                 min_iter =  atoi(optarg);
-                break;    
+                break;
             case 'c':
                 converge_delta =  atoi(optarg);
-                break;    
+                break;
             case 'a':
                 sample_size = atoi(optarg);
                 break;
@@ -267,19 +267,19 @@ int main(int argc, char* argv[]) {
         printf("No output directory specified.  Exiting.\n");
         exit(-1);
     }
-    
+
     if (dir_exists(out)) {
         string rmout = "rm -rf " + out;
         system(rmout.c_str());
     }
     make_directory(out);
     printf("output directory: %s\n", out.c_str());
-    
+
     if (data == "") {
         printf("No data directory specified.  Exiting.\n");
         exit(-1);
     }
-    
+
     if (!dir_exists(data)) {
         printf("data directory %s doesn't exist!  Exiting.\n", data.c_str());
         exit(-1);
@@ -290,40 +290,40 @@ int main(int argc, char* argv[]) {
         printf("training data file (train.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
     }
-    
+
     if (!file_exists(data + "/validation.tsv")) {
         printf("validation data file (validation.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
     }
-    
+
     if (!factor_only && !file_exists(data + "/network.tsv")) {
         printf("network data file (network.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
     }
-    
+
     if (social_only && factor_only) {
         printf("Model cannot be both social only (SF) and factor only (PF).  Exiting.\n");
         exit(-1);
     }
-    
+
     if (final_pass && final_pass_test) {
         printf("Model cannot do a final pass both on all users and only on test users.  Exiting.\n");
         exit(-1);
     }
-    
+
     if (svi && batchvi) {
         printf("Inference method cannot be both stochatic (SVI) and batch.  Exiting.\n");
         exit(-1);
     }
-    
+
     if (batchvi && (final_pass || final_pass_test)) {
         printf("Batch VI doesn't allow for a \"final pass.\" Ignoring this argument.\n");
         final_pass = false;
         final_pass_test = false;
     }
-    
+
     printf("\nmodel specification:\n");
-    
+
     if (social_only) {
         printf("\tsocial factorization (SF)   [ social factors only ]\n");
     } else if (factor_only) {
@@ -351,16 +351,16 @@ int main(int argc, char* argv[]) {
     if (item_bias) {
         printf("\tdelta (%.2f, %.2f)\n", a_delta, b_delta);
     }
-    
+
 
     printf("\ndata attributes:\n");
-    
+
     if (binary) {
         printf("\tbinary ratings\n");
     } else {
         printf("\tinteger ratings\n");
     }
-    
+
     if (!factor_only) {
         if (directed) {
             printf("\tdirected network\n");
@@ -368,7 +368,7 @@ int main(int argc, char* argv[]) {
             printf("\tundirected network\n");
         }
     }
-    
+
     printf("\ninference parameters:\n");
     printf("\tseed:                                     %d\n", (int)seed);
     printf("\tsave frequency:                           %d\n", save_freq);
@@ -377,10 +377,10 @@ int main(int argc, char* argv[]) {
     printf("\tmaximum number of iterations:             %d\n", max_iter);
     printf("\tminimum number of iterations:             %d\n", min_iter);
     printf("\tchange in log likelihood for convergence: %f\n", converge_delta);
-    printf("\tfinal pass after convergence:             %s\n", final_pass ? "all users" : 
+    printf("\tfinal pass after convergence:             %s\n", final_pass ? "all users" :
         (final_pass_test ? "test users only" : "none"));
-    
-   
+
+
     if (!batchvi) {
         printf("\nStochastic variational inference parameters\n");
         if (!svi)
@@ -391,7 +391,7 @@ int main(int argc, char* argv[]) {
     } else {
         printf("\nusing batch variational inference\n");
     }
-    
+
 
     model_settings settings;
     settings.set(verbose, out, data, svi, a_theta, b_theta, a_beta, b_beta, a_tau, b_tau,
@@ -416,7 +416,7 @@ int main(int argc, char* argv[]) {
     printf("\treading validation data\t\t...\t");
     dataset->read_validation(settings.datadir + "/validation.tsv");
     printf("done\n");
-    
+
     if (!file_exists(data + "/test.tsv")) {
         printf("testing data file (test.tsv) doesn't exist!  Exiting.\n");
         exit(-1);
@@ -424,11 +424,11 @@ int main(int argc, char* argv[]) {
     printf("\treading testing data\t\t...\t");
     dataset->read_test(settings.datadir + "/test.tsv");
     printf("done\n");
-    
+
     printf("\tsaving data stats\t\t...\t");
     dataset->save_summary(out + "/data_stats.txt");
     printf("done\n");
-    
+
     // save the run settings
     printf("Saving settings\n");
     if (!svi && !batchvi) {
@@ -443,13 +443,13 @@ int main(int argc, char* argv[]) {
     if (!settings.svi)
         settings.set_sample_size(dataset->user_count());
     printf("sample size %d\n", settings.sample_size);
-    
+
     settings.save(out + "/settings.txt");
 
     // TODO: make this/evaluate below optional (--test_only, --no_test)
     printf("********************************************************************************\n");
     printf("commencing model evaluation\n");
-    
+
     // create model instance; learn!
     printf("\ncreating model instance\n");
     SPF *model = new SPF(&settings, dataset);
@@ -459,7 +459,7 @@ int main(int argc, char* argv[]) {
     // test the final model fit
     printf("evaluating model on held-out data\n");
     model->evaluate();
-    
+
     delete model;
     delete dataset;
 

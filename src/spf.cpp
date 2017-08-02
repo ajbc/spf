@@ -31,27 +31,27 @@ SPF::SPF(model_settings* model_set, Data* dataset) {
     a_delta = fvec(data->item_count());
     b_delta = settings->b_delta + data->user_count();
     a_delta_user = fvec(data->item_count());
-   
+
     // keep track of old a_beta and a_delta for SVI
     a_beta_old  = fmat(settings->k, data->item_count());
     a_beta_old.fill(settings->a_beta);
     a_delta_old = fvec(data->item_count());
     a_delta_old.fill(settings->a_delta);
-    
+
     printf("\tsetting random seed\n");
     rand_gen = gsl_rng_alloc(gsl_rng_taus);
     gsl_rng_set(rand_gen, (long) settings->seed); // init the seed
-    
-    initialize_parameters(); 
+
+    initialize_parameters();
 
     scale = settings->svi ? float(data->user_count()) / float(settings->sample_size) : 1;
 }
 
 void SPF::learn() {
-    double old_likelihood, delta_likelihood, likelihood = -1e10; 
+    double old_likelihood, delta_likelihood, likelihood = -1e10;
     int likelihood_decreasing_count = 0;
     time_t start_time, end_time;
-    
+
     int iteration = 0;
     char iter_as_str[4];
     bool converged = false;
@@ -61,7 +61,7 @@ void SPF::learn() {
         time(&start_time);
         iteration++;
         printf("iteration %d\n", iteration);
-        
+
         reset_helper_params();
 
         // update rate for user preferences
@@ -106,8 +106,9 @@ void SPF::learn() {
                 if (!settings->social_only && !settings->factor_only && !settings->fix_influence) {
                     user_change /= 2;
 
-                    // if the updates are less than 1% change, the local params have converged
-                    if (user_change < 0.01)
+                    // if the updates are less than 1% change or over 10 local iterations,
+                    // declare the local params to be converged
+                    if (user_change < 0.01 || user_iters > 10)
                         user_converged = true;
 
                 } else {
@@ -122,11 +123,11 @@ void SPF::learn() {
             a_beta += a_beta_user;
             a_delta += a_delta_user;
         }
-    
+
         if (!settings->social_only) {
             // update rate for item attributes
             b_beta.each_col() += sum(theta, 1);
-            
+
             // update per-item parameters
             set<int>::iterator it;
             for (it = items.begin(); it != items.end(); it++) {
@@ -155,19 +156,19 @@ void SPF::learn() {
         if (on_final_pass) {
             printf("Final pass complete\n");
             converged = true;
-            
+
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
-            delta_likelihood = abs((old_likelihood - likelihood) / 
+            delta_likelihood = abs((old_likelihood - likelihood) /
                 old_likelihood);
             log_convergence(iteration, likelihood, delta_likelihood);
         } else if (iteration >= settings->max_iter) {
             printf("Reached maximum number of iterations.\n");
             converged = true;
-            
+
             old_likelihood = likelihood;
             likelihood = get_ave_log_likelihood();
-            delta_likelihood = abs((old_likelihood - likelihood) / 
+            delta_likelihood = abs((old_likelihood - likelihood) /
                 old_likelihood);
             log_convergence(iteration, likelihood, delta_likelihood);
         } else if (iteration % settings->conv_freq == 0) {
@@ -178,7 +179,7 @@ void SPF::learn() {
                 likelihood_decreasing_count += 1;
             else
                 likelihood_decreasing_count = 0;
-            delta_likelihood = abs((old_likelihood - likelihood) / 
+            delta_likelihood = abs((old_likelihood - likelihood) /
                 old_likelihood);
             log_convergence(iteration, likelihood, delta_likelihood);
             if (settings->verbose) {
@@ -196,9 +197,9 @@ void SPF::learn() {
                 converged = true;
             }
         }
-        
+
         // save intermediate results
-        if (!converged && settings->save_freq > 0 && 
+        if (!converged && settings->save_freq > 0 &&
             iteration % settings->save_freq == 0) {
             printf(" saving\n");
             sprintf(iter_as_str, "%04d", iteration);
@@ -215,7 +216,7 @@ void SPF::learn() {
         time(&end_time);
         log_time(iteration, difftime(end_time, start_time));
 
-        if (converged && !on_final_pass && 
+        if (converged && !on_final_pass &&
             (settings->final_pass || settings->final_pass_test)) {
             printf("final pass on all users.\n");
             on_final_pass = true;
@@ -225,7 +226,7 @@ void SPF::learn() {
             // things should look exactly like batch for all users
             if (settings->final_pass) {
                 settings->set_stochastic_inference(false);
-                settings->set_sample_size(data->user_count()); 
+                settings->set_sample_size(data->user_count());
                 scale = 1;
             } else {
                 settings->set_sample_size(data->test_users.size());
@@ -233,15 +234,15 @@ void SPF::learn() {
             }
         }
     }
-    
+
     save_parameters("final");
 }
 
 double SPF::predict(int user, int item) {
     double prediction = settings->social_only ? 1e-10 : 0;
-  
+
     prediction += accu(tau.col(user) % data->ratings.col(item));
-   
+
     if (!settings->social_only) {
         prediction += accu(theta.col(user) % beta.col(item));
     }
@@ -252,9 +253,9 @@ double SPF::predict(int user, int item) {
 
     return prediction;
 }
- 
+
 // helper function to sort predictions properly
-bool prediction_compare(const pair<pair<double,int>, int>& itemA, 
+bool prediction_compare(const pair<pair<double,int>, int>& itemA,
     const pair<pair<double, int>, int>& itemB) {
     // if the two values are equal, sort by popularity!
     if (itemA.first.first == itemB.first.first) {
@@ -276,10 +277,10 @@ void SPF::evaluate(string label) {
 void SPF::evaluate(string label, bool write_rankings) {
     time_t start_time, end_time;
     time(&start_time);
-    
+
     eval(this, &Model::predict, settings->outdir, data, false, settings->seed,
         settings->verbose, label, write_rankings, false);
-    
+
     time(&end_time);
     log_time(-1, difftime(end_time, start_time));
 }
@@ -299,7 +300,7 @@ void SPF::initialize_parameters() {
                 logtau(neighbor, user) = log(1.0 + 1e-5);
 
                 double all = settings->b_tau;
-                for (i = 0; i < data->item_count(neighbor); i++) { 
+                for (i = 0; i < data->item_count(neighbor); i++) {
                     item = data->get_item(neighbor, i);
                     all += data->ratings(neighbor, item);
                 } //TODO: this doeesn't need to be done as much... only one time per user (U), not UxU times
@@ -312,14 +313,14 @@ void SPF::initialize_parameters() {
         // user preferences
         for (user = 0; user < data->user_count(); user++) {
             for (k = 0; k < settings->k; k++) {
-                theta(k, user) = (settings->a_theta + 
+                theta(k, user) = (settings->a_theta +
                     gsl_rng_uniform_pos(rand_gen))
                     / (settings->b_theta);
                 logtheta(k, user) = log(theta(k, user));
             }
             theta.col(user) /= accu(theta.col(user));
         }
-        
+
         // item attributes
         for (item = 0; item < data->item_count(); item++) {
             for (k = 0; k < settings->k; k++) {
@@ -367,7 +368,7 @@ void SPF::save_parameters(string label) {
         }
         fclose(file);
     }
-    
+
     if (!settings->social_only) {
         int k;
 
@@ -380,7 +381,7 @@ void SPF::save_parameters(string label) {
             fprintf(file, "\n");
         }
         fclose(file);
-        
+
         // write out beta
         file = fopen((settings->outdir+"/beta-"+label+".dat").c_str(), "w");
         for (int item = 0; item < data->item_count(); item++) {
@@ -451,14 +452,14 @@ double SPF::update_tau(int user) {
     total = 0;
     for (n = 0; n < data->neighbor_count(user); n++) {
         neighbor = data->get_neighbor(user, n);
-        
+
         old = tau(neighbor, user);
         total += tau(neighbor, user);
 
         tau(neighbor, user) = a_tau(neighbor, user) / b_tau(neighbor, user);
         // fake log!
         logtau(neighbor, user) = exp(gsl_sf_psi(a_tau(neighbor, user)) - log(b_tau(neighbor, user)));
-        
+
         change += abs(old - tau(neighbor, user));
     }
 
@@ -480,12 +481,12 @@ double SPF::update_theta(int user) {
 
 void SPF::update_beta(int item) {
     if (settings->svi) {
-        double rho = pow(iter_count[item] + settings->delay, 
+        double rho = pow(iter_count[item] + settings->delay,
             -1 * settings->forget);
         a_beta(item) = (1 - rho) * a_beta_old(item) + rho * a_beta(item);
         a_beta_old(item) = a_beta(item);
     }
-    
+
     for (int k = 0; k < settings->k; k++) {
         beta(k, item) =  a_beta(k, item) / b_beta(k, item);
         logbeta(k, item) = gsl_sf_psi(a_beta(k, item));
@@ -495,7 +496,7 @@ void SPF::update_beta(int item) {
 
 void SPF::update_delta(int item) {
     if (settings->svi) {
-        double rho = pow(iter_count[item] + settings->delay, 
+        double rho = pow(iter_count[item] + settings->delay,
             -1 * settings->forget);
         a_delta(item) = (1 - rho) * a_delta_old(item) + rho * a_delta(item);
         a_delta_old(item) = a_delta(item);
@@ -512,7 +513,7 @@ double SPF::get_ave_log_likelihood() {
         rating = data->get_validation_rating(i);
 
         prediction = predict(user, item);
-        
+
         likelihood +=
             log(prediction) * rating - log(factorial(rating)) - prediction;
     }
@@ -534,6 +535,6 @@ void SPF::log_time(int iteration, double duration) {
 
 void SPF::log_user(FILE* file, int user, int heldout, double rmse, double mae,
     double rank, int first, double crr, double ncrr, double ndcg) {
-    fprintf(file, "%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user, 
+    fprintf(file, "%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", user,
         rmse, mae, rank, first, crr, ncrr, ndcg);
 }
